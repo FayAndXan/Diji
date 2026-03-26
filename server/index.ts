@@ -667,8 +667,8 @@ Send a natural end-of-day summary. Cover what went well, what could be better. M
 }
 
 const BRYAN_BOT_TOKEN = process.env.BRYAN_BOT_TOKEN || '8566402538:AAFZAo70Ylvv0Byr3quG9g5pw7MeMTNn69k';
-const BRYAN_CONFIG = process.env.BRYAN_CONFIG || '/root/.openclaw-companion/openclaw.json';
-const BRYAN_STATE = process.env.BRYAN_STATE || '/root/.openclaw-companion/';
+const COMPANION_CONFIG = process.env.COMPANION_CONFIG || process.env.OPENCLAW_CONFIG_PATH || '/root/.openclaw-companion/openclaw.json';
+const COMPANION_STATE = process.env.COMPANION_STATE || '/root/.openclaw-companion/';
 
 // Cooldown: don't spam triggers (max 1 per type per hour per user)
 const triggerCooldowns = new Map<string, number>();
@@ -732,7 +732,7 @@ async function fireBryanTrigger(user: User, trigger: HealthTrigger) {
     // Use OpenClaw CLI to run Bryan with the trigger prompt
     const { execSync } = require('child_process');
     const result = execSync(
-      `OPENCLAW_CONFIG_PATH=${BRYAN_CONFIG} OPENCLAW_STATE_DIR=${BRYAN_STATE} openclaw agent --channel telegram --to ${chatId} -m "${trigger.message.replace(/"/g, '\\"')}"`,
+      `OPENCLAW_CONFIG_PATH=${COMPANION_CONFIG} OPENCLAW_STATE_DIR=${COMPANION_STATE} openclaw agent --channel telegram --to ${chatId} -m "${trigger.message.replace(/"/g, '\\"')}"`,
       { timeout: 30000, encoding: 'utf-8' }
     ).trim();
 
@@ -1074,7 +1074,7 @@ app.post('/api/internal/link-channel', (req, res) => {
     
     // Update OpenClaw config: identityLinks + allowFrom
     try {
-      const configPath = process.env.OPENCLAW_CONFIG_PATH || '/root/.openclaw-companion/openclaw.json';
+      const configPath = process.env.OPENCLAW_CONFIG_PATH || process.env.OPENCLAW_CONFIG_PATH || '/root/.openclaw-companion/openclaw.json';
       const config = JSON.parse(readFileSync(configPath, 'utf-8'));
       
       // 1. Add to allowFrom for the channel (so DM allowlist lets them through)

@@ -16,12 +16,12 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 
 const DATA_DIR = '/root/.openclaw/workspace/projects/companion/server/data';
-const USER_DATA_DIR = '/root/.openclaw-companion/.openclaw/workspace/data/users';
+const USER_DATA_DIR = process.env.USER_DATA_DIR || '/root/.openclaw-companion/.openclaw/workspace/data/users';
 
 /**
  * Parse session key to extract channel and peer info
  * Format examples:
- * - "dm:telegram:1641047688" 
+ * - "dm:telegram:PEER_ID" 
  * - "dm:whatsapp-cloud:821072962505"
  * - "dm:openclaw-weixin:wxid_xxx"
  * - "main" (legacy single-user)
@@ -33,7 +33,7 @@ export function parseSessionKey(sessionKey) {
   
   const parts = sessionKey.split(':');
   
-  // Format: agent:main:telegram:direct:1641047688
+  // Format: agent:main:telegram:direct:PEER_ID
   const channels = ['telegram', 'whatsapp-cloud', 'openclaw-weixin'];
   for (let i = 0; i < parts.length; i++) {
     if (channels.includes(parts[i])) {
@@ -206,12 +206,12 @@ export function resolveUser(ctx) {
   if (isMain) {
     // Legacy main session — assume Fay
     return {
-      id: 'fayandxan',
+      id: process.env.DEFAULT_USER_ID || 'default',
       isNew: false,
       channel: 'telegram',
-      peerId: '1641047688',
+      peerId: process.env.DEFAULT_PEER_ID || '0',
       healthProfile: { language: 'en', companionGender: 'male', timezone: 'Asia/Shanghai' },
-      dataDir: join(USER_DATA_DIR, 'fayandxan')
+      dataDir: join(USER_DATA_DIR, process.env.DEFAULT_USER_ID || 'default')
     };
   }
   

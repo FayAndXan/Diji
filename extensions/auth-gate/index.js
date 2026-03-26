@@ -64,7 +64,7 @@ export default function register(api) {
     
     return {
       claimed: true,
-      reply: "hey! i'm bryan 🧬 to get started, download the companion app and create an account first, then come back and we'll talk."
+      reply: "hey! to get started, download the app and create an account first, then come back and we'll talk."
     };
   });
 }

@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync, existsSync, appendFileSync } from 'fs';
 import { join } from 'path';
 
-const USER_DATA_DIR = '/root/.openclaw-companion/.openclaw/workspace/data/users';
+const USER_DATA_DIR = process.env.USER_DATA_DIR || '/root/.openclaw-companion/.openclaw/workspace/data/users';
 const LOG_FILE = '/tmp/user-bootstrap.log';
 
 function log(msg: string) {
@@ -15,7 +15,7 @@ function parseSessionKey(sessionKey: string | undefined): { channel: string | nu
     return { channel: null, peerId: null };
   }
   
-  // Format: agent:main:telegram:direct:1641047688
+  // Format: agent:main:telegram:direct:PEER_ID
   // or: agent:main:whatsapp-cloud:direct:821072962505
   // or: agent:main:openclaw-weixin:direct:wxid_xxx
   const parts = sessionKey.split(':');
@@ -83,12 +83,12 @@ export default async (event: any) => {
     log(`No user found for ${channel}:${peerId} — GATED (sending canned reply via API)`);
     
     // Send canned reply directly via Telegram/WhatsApp API — ZERO LLM cost
-    const gateMsg = "hey! i'm bryan 🧬 to get started, download the companion app and create an account first, then come back and we'll talk.";
+    const gateMsg = "hey! to get started, download the app and create an account first, then come back and we'll talk.";
     
     if (channel === 'telegram') {
       try {
         // Read bot token from Bryan's config
-        const cfgRaw = readFileSync('/root/.openclaw-companion/openclaw.json', 'utf-8');
+        const cfgRaw = readFileSync(process.env.OPENCLAW_CONFIG_PATH || '/root/.openclaw-companion/openclaw.json', 'utf-8');
         const cfg = JSON.parse(cfgRaw);
         const botToken = cfg?.channels?.telegram?.accounts?.default?.token;
         if (botToken) {
