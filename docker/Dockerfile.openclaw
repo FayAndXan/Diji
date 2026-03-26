@@ -1,0 +1,31 @@
+# Diji OpenClaw Instance
+# Each instance handles a chunk of users via dmScope: per-channel-peer
+# Registers itself with the diji-router on startup
+
+FROM node:22-slim
+
+# Install OpenClaw
+RUN npm install -g openclaw
+
+# Create companion directory
+RUN mkdir -p /root/.openclaw-companion/.openclaw/workspace \
+    /root/.openclaw-companion/extensions/auth-gate \
+    /root/.openclaw-companion/extensions/rule-injector \
+    /root/.openclaw-companion/hooks/user-bootstrap \
+    /root/.openclaw-companion/data/users
+
+# Copy generic extensions and hooks
+COPY extensions/ /root/.openclaw-companion/extensions/
+COPY hooks/ /root/.openclaw-companion/hooks/
+
+# Copy workspace templates (SOUL.md, AGENTS.md, etc. are per-companion)
+# These get mounted or copied from the companion template at runtime
+COPY templates/companion/.openclaw/workspace/ /root/.openclaw-companion/.openclaw/workspace/
+
+# Copy startup script
+COPY scripts/instance-start.sh /usr/local/bin/instance-start.sh
+RUN chmod +x /usr/local/bin/instance-start.sh
+
+EXPOSE 18809
+
+CMD ["/usr/local/bin/instance-start.sh"]

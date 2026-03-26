@@ -1,0 +1,62 @@
+# Diji Platform - Docker Compose
+# Runs: Redis + Router + N OpenClaw instances + Companion Server
+#
+# Scale instances: docker compose up --scale openclaw=5
+
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    restart: always
+
+  router:
+    build: ../gateway/router
+    ports:
+      - "4000:4000"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - MAX_USERS_PER_INSTANCE=500
+    depends_on:
+      - redis
+    restart: always
+
+  openclaw:
+    image: diji-openclaw:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.openclaw
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      - redis
+    volumes:
+      - openclaw-data:/root/.openclaw-companion
+    deploy:
+      replicas: 3
+      resources:
+        limits:
+          memory: 2G
+    restart: always
+
+  companion-server:
+    build: ../server
+    ports:
+      - "3950:3950"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=${DATABASE_URL}
+    depends_on:
+      - redis
+    restart: always
+
+volumes:
+  redis-data:
+  openclaw-data:

@@ -1,0 +1,12 @@
+{
+  "id": "rule-injector",
+  "name": "Bryan Rule Injector",
+  "version": "0.1.0",
+  "description": "Injects critical rules into every agent turn via before_prompt_build. Forces compliance without relying on agent memory.",
+  "entry": "index.js",
+  "configSchema": {
+    "type": "object",
+    "properties": {},
+    "additionalProperties": false
+  }
+}

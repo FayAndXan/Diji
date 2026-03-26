@@ -1,0 +1,154 @@
+import { readFileSync, writeFileSync, existsSync, appendFileSync } from 'fs';
+import { join } from 'path';
+
+const USER_DATA_DIR = '/root/.openclaw-companion/.openclaw/workspace/data/users';
+const LOG_FILE = '/tmp/user-bootstrap.log';
+
+function log(msg: string) {
+  const ts = new Date().toISOString();
+  appendFileSync(LOG_FILE, `[${ts}] ${msg}\n`);
+  console.log(`[user-bootstrap] ${msg}`);
+}
+
+function parseSessionKey(sessionKey: string | undefined): { channel: string | null; peerId: string | null } {
+  if (!sessionKey || sessionKey === 'main') {
+    return { channel: null, peerId: null };
+  }
+  
+  // Format: agent:main:telegram:direct:1641047688
+  // or: agent:main:whatsapp-cloud:direct:821072962505
+  // or: agent:main:openclaw-weixin:direct:wxid_xxx
+  const parts = sessionKey.split(':');
+  
+  // Look for known channel names in the parts
+  const channels = ['telegram', 'whatsapp-cloud', 'openclaw-weixin'];
+  for (let i = 0; i < parts.length; i++) {
+    if (channels.includes(parts[i])) {
+      const channel = parts[i];
+      // peerId is typically the last part
+      const peerId = parts[parts.length - 1];
+      if (peerId && peerId !== channel && peerId !== 'direct' && peerId !== 'group') {
+        return { channel, peerId };
+      }
+    }
+  }
+  
+  // Fallback: dm:channel:peerId format
+  if (parts.length >= 3 && parts[0] === 'dm') {
+    return { channel: parts[1], peerId: parts.slice(2).join(':') };
+  }
+  
+  return { channel: null, peerId: null };
+}
+
+async function lookupUser(channel: string, peerId: string): Promise<any | null> {
+  try {
+    const res = await fetch(`http://localhost:3950/api/internal/user-by-channel/${channel}/${peerId}`);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+function tryReadFile(path: string): string | null {
+  if (!existsSync(path)) return null;
+  try {
+    return readFileSync(path, 'utf-8');
+  } catch {
+    return null;
+  }
+}
+
+export default async (event: any) => {
+  log(`Hook fired! event.type=${event.type} event.action=${event.action}`);
+  
+  if (!(event.type === 'agent:bootstrap' || (event.type === 'agent' && event.action === 'bootstrap'))) {
+    log(`Skipping — not agent:bootstrap (got type=${event.type} action=${event.action})`);
+    return;
+  }
+  
+  const context = event.context;
+  const sessionKey = context?.sessionKey;
+  log(`sessionKey=${sessionKey}`);
+  
+  const { channel, peerId } = parseSessionKey(sessionKey);
+  if (!channel || !peerId) {
+    log('Main session or unknown key, skipping per-user injection');
+    return;
+  }
+  
+  const user = await lookupUser(channel, peerId);
+  if (!user) {
+    log(`No user found for ${channel}:${peerId} — GATED (sending canned reply via API)`);
+    
+    // Send canned reply directly via Telegram/WhatsApp API — ZERO LLM cost
+    const gateMsg = "hey! i'm bryan 🧬 to get started, download the companion app and create an account first, then come back and we'll talk.";
+    
+    if (channel === 'telegram') {
+      try {
+        // Read bot token from Bryan's config
+        const cfgRaw = readFileSync('/root/.openclaw-companion/openclaw.json', 'utf-8');
+        const cfg = JSON.parse(cfgRaw);
+        const botToken = cfg?.channels?.telegram?.accounts?.default?.token;
+        if (botToken) {
+          const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
+          await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: peerId, text: gateMsg }),
+          });
+          log(`Sent gate reply via Telegram API to ${peerId}`);
+        }
+      } catch (err) {
+        log(`Failed to send Telegram gate reply: ${err}`);
+      }
+    }
+    // TODO: Add WhatsApp Cloud API and WeChat direct sends
+    
+    // Wipe bootstrap files so even if agent runs, it has no context
+    if (context.bootstrapFiles) {
+      context.bootstrapFiles = [];
+    }
+    return;
+  }
+  
+  const userId = user.id;
+  log(`User resolved: ${userId} (${channel}:${peerId})`);
+  
+  const userDir = join(USER_DATA_DIR, userId);
+  
+  // Replace USER.md
+  const userMdContent = tryReadFile(join(userDir, 'USER.md'));
+  if (userMdContent && context.bootstrapFiles) {
+    const idx = context.bootstrapFiles.findIndex((f: any) => f.name === 'USER.md');
+    if (idx >= 0) {
+      context.bootstrapFiles[idx] = {
+        ...context.bootstrapFiles[idx],
+        content: userMdContent,
+      };
+      log(`Replaced USER.md for ${userId}`);
+    } else {
+      context.bootstrapFiles.push({ name: 'USER.md', content: userMdContent });
+      log(`Added USER.md for ${userId}`);
+    }
+  }
+  
+  // Replace MEMORY.md
+  const memoryContent = tryReadFile(join(userDir, 'MEMORY.md'));
+  if (memoryContent && context.bootstrapFiles) {
+    const idx = context.bootstrapFiles.findIndex((f: any) => f.name === 'MEMORY.md');
+    if (idx >= 0) {
+      context.bootstrapFiles[idx] = {
+        ...context.bootstrapFiles[idx],
+        content: memoryContent,
+      };
+      log(`Replaced MEMORY.md for ${userId}`);
+    } else {
+      context.bootstrapFiles.push({ name: 'MEMORY.md', content: memoryContent });
+      log(`Added MEMORY.md for ${userId}`);
+    }
+  }
+  
+  log('Bootstrap injection complete');
+};
