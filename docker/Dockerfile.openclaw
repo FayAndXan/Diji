@@ -44,6 +44,10 @@ RUN cd /root/.openclaw-companion/server && npm install --production 2>/dev/null 
 COPY scripts/instance-start.sh /usr/local/bin/instance-start.sh
 RUN chmod +x /usr/local/bin/instance-start.sh
 
+# Tell OpenClaw where to find config
+ENV OPENCLAW_CONFIG_PATH=/root/.openclaw-companion/openclaw.json
+ENV OPENCLAW_STATE_DIR=/root/.openclaw-companion
+
 EXPOSE 18809
 
 CMD ["/usr/local/bin/instance-start.sh"]

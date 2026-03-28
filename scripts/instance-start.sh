@@ -31,6 +31,8 @@ cleanup() {
 }
 trap cleanup SIGTERM SIGINT
 
-# Start OpenClaw gateway
+# Start OpenClaw gateway in foreground (container, no systemd)
+export OPENCLAW_CONFIG_PATH=/root/.openclaw-companion/openclaw.json
+export OPENCLAW_STATE_DIR=/root/.openclaw-companion
 cd /root/.openclaw-companion
-exec openclaw gateway start --port ${GATEWAY_PORT} --no-open
+exec openclaw gateway run --allow-unconfigured
