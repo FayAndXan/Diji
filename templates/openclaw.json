@@ -152,7 +152,8 @@
         "/root/.openclaw-companion/extensions/companion-search-enforcer",
         "/root/.openclaw-companion/extensions/companion-auto-memory",
         "/root/.openclaw-companion/extensions/rule-injector",
-        "/root/.openclaw-companion/extensions/openclaw-whatsapp-cloud-api"
+        "/root/.openclaw-companion/extensions/openclaw-whatsapp-cloud-api",
+        "/usr/local/lib/node_modules/@tencent-weixin/openclaw-weixin"
       ]
     },
     "entries": {
