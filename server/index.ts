@@ -1145,9 +1145,35 @@ app.post('/api/auth/magic-link', async (req, res) => {
   pending[email.toLowerCase()] = { code, expiry, email: email.toLowerCase() };
   writeFileSync(authPath, JSON.stringify(pending, null, 2));
   
-  // TODO: Send via Resend API
-  // For now, log the code (will wire up Resend later)
-  console.log(`[Auth] Magic link code for ${email}: ${code}`);
+  // Send via Resend API
+  const resendKey = process.env.RESEND_API_KEY;
+  if (resendKey) {
+    try {
+      const emailRes = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${resendKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: 'Bryan <onboarding@resend.dev>',
+          to: email,
+          subject: 'Your Bryan verification code',
+          html: `<div style="font-family: -apple-system, sans-serif; max-width: 400px; margin: 0 auto; padding: 40px 20px;">
+            <h2 style="font-size: 24px; margin-bottom: 8px;">Your code</h2>
+            <p style="font-size: 36px; font-weight: 700; letter-spacing: 8px; margin: 20px 0;">${code}</p>
+            <p style="color: #666; font-size: 14px;">Enter this code in the Bryan app to continue. It expires in 15 minutes.</p>
+          </div>`,
+        }),
+      });
+      const result = await emailRes.json() as Record<string, any>;
+      console.log(`[Auth] Magic link sent to ${email}: ${result.id || 'error'}`);
+    } catch (err) {
+      console.error(`[Auth] Failed to send email to ${email}:`, err);
+    }
+  } else {
+    console.log(`[Auth] No RESEND_API_KEY — code for ${email}: ${code}`);
+  }
   
   res.json({ ok: true, message: 'Check your email' });
 });

@@ -57,6 +57,7 @@ services:
       - WHATSAPP_VERIFY_TOKEN=${WHATSAPP_VERIFY_TOKEN}
     ports:
       - "3100:3100"  # WhatsApp Cloud API webhook
+      - "18809:18809"  # OpenClaw gateway HTTP API (chat completions)
     depends_on:
       - redis
     volumes:
@@ -79,6 +80,7 @@ services:
       - REDIS_URL=redis://redis:6379
       - DATABASE_URL=${DATABASE_URL}
       - SUPERMEMORY_API_KEY=${SUPERMEMORY_API_KEY}
+      - RESEND_API_KEY=${RESEND_API_KEY}
     volumes:
       - companion-data:/app/data
     depends_on:
