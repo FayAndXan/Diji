@@ -57,7 +57,8 @@ services:
       - WHATSAPP_VERIFY_TOKEN=${WHATSAPP_VERIFY_TOKEN}
     ports:
       - "3100:3100"  # WhatsApp Cloud API webhook
-      - "18809:18809"  # OpenClaw gateway HTTP API (chat completions)
+      - "18850:18789"  # OpenClaw gateway WS + HTTP API (chat completions)
+      - "18851:18809"  # OpenClaw gateway control UI
     depends_on:
       - redis
     volumes:

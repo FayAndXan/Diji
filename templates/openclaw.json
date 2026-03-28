@@ -114,7 +114,8 @@
   },
   "gateway": {
     "mode": "local",
-    "bind": "lan"
+    "bind": "lan",
+    "port": 18809
   },
   "plugins": {
     "allow": [
