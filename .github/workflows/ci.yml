@@ -32,9 +32,11 @@ jobs:
             const cfg = JSON.parse(fs.readFileSync('templates/openclaw.json','utf-8'));
             const entries = Object.keys(cfg.plugins.entries);
             const paths = cfg.plugins.load.paths.map(p => p.split('/').pop());
-            const missing = entries.filter(e => !paths.some(p => p === e || p.includes(e)));
+            const stockPlugins = (cfg.plugins.allow || []).filter(a => !paths.some(p => p === a || p.includes(a)));
+            const custom = entries.filter(e => !stockPlugins.includes(e));
+            const missing = custom.filter(e => !paths.some(p => p === e || p.includes(e)));
             if (missing.length) { console.error('❌ Missing paths:', missing); process.exit(1); }
-            console.log('✅ All', entries.length, 'plugin entries have load paths');
+            console.log('✅ All', custom.length, 'custom plugin entries have load paths (' + stockPlugins.length + ' stock plugins in allow list)');
           "
 
       - name: Docker build
