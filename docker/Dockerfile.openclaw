@@ -18,7 +18,7 @@ RUN mkdir -p /root/.openclaw-companion/.openclaw/workspace \
     /root/.openclaw-companion/server
 
 # Install WeChat plugin (openclaw-weixin)
-RUN npm install -g @tencent-weixin/openclaw-weixin
+RUN npm install -g @tencent-weixin/openclaw-weixin@2.0.1
 
 # Copy all extensions (auth-gate, rule-injector, memory-provider, 9 companion plugins)
 COPY extensions/ /root/.openclaw-companion/extensions/
