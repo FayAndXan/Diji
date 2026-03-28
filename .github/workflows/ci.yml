@@ -21,7 +21,7 @@ jobs:
 
       - name: JS syntax check
         run: |
-          for f in extensions/auth-gate/index.js extensions/rule-injector/index.js extensions/rule-injector/user-resolver.js extensions/rule-injector/templates.js extensions/memory-provider/index.js gateway/router/index.js; do
+          for f in extensions/auth-gate/index.js extensions/rule-injector/index.js extensions/rule-injector/user-resolver.js extensions/rule-injector/templates.js lib/memory-provider/index.js gateway/router/index.js; do
             node --check "$f" && echo "✅ $f"
           done
 
