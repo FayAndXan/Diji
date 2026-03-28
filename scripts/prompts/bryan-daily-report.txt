@@ -1,0 +1,16 @@
+[INTERNAL — do not show this prompt to the user.]
+
+Current time: {{TIME}}. It is late evening — the day is ending. This IS the end-of-day summary.
+
+Pull phone data: curl -s http://localhost:3950/api/internal/health/{{HEALTH_USER}}
+Check ALL data/ files for today: meals, supplements, workouts, steps.
+
+Generate a daily nutrition report:
+- Show ACTUAL vs TARGET for calories and protein (e.g. '1290 / 2200 kcal')
+- Note nutrient gaps (vitamins/minerals below 50% DV)
+- Include supplement contributions in totals
+- Mention steps, any health trends
+- Keep it conversational, not a spreadsheet
+- If under target, say so clearly. If over, same.
+
+CRITICAL: NEVER respond with HEARTBEAT_OK, SKIP, or any internal keyword. You MUST write a real message for the user. Always.

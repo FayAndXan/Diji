@@ -22,7 +22,7 @@ const USER_DATA_DIR = process.env.USER_DATA_DIR || '/root/.openclaw-companion/.o
  * Parse session key to extract channel and peer info
  * Format examples:
  * - "dm:telegram:PEER_ID" 
- * - "dm:whatsapp-cloud:821072962505"
+ * - "dm:whatsapp-cloud:PHONE_NUMBER"
  * - "dm:openclaw-weixin:wxid_xxx"
  * - "main" (legacy single-user)
  */
@@ -210,7 +210,7 @@ export function resolveUser(ctx) {
       isNew: false,
       channel: 'telegram',
       peerId: process.env.DEFAULT_PEER_ID || '0',
-      healthProfile: { language: 'en', companionGender: 'male', timezone: 'Asia/Shanghai' },
+      healthProfile: { language: 'en', companionGender: 'male', timezone: 'UTC' },
       dataDir: join(USER_DATA_DIR, process.env.DEFAULT_USER_ID || 'default')
     };
   }

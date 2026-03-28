@@ -16,7 +16,7 @@ function parseSessionKey(sessionKey: string | undefined): { channel: string | nu
   }
   
   // Format: agent:main:telegram:direct:PEER_ID
-  // or: agent:main:whatsapp-cloud:direct:821072962505
+  // or: agent:main:whatsapp-cloud:direct:PHONE_NUMBER
   // or: agent:main:openclaw-weixin:direct:wxid_xxx
   const parts = sessionKey.split(':');
   

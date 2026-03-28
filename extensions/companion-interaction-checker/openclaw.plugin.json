@@ -1,0 +1,15 @@
+{
+  "id": "companion-interaction-checker",
+  "name": "Companion Interaction Checker",
+  "version": "0.1.0",
+  "description": "Checks for known interactions between all supplements in the user's stack. Injects warnings when supplements-stack.json is referenced or updated.",
+  "entry": "index.ts",
+  "hooks": ["before_prompt_build"],
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "enabled": { "type": "boolean", "default": true }
+    },
+    "additionalProperties": false
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "id": "companion-schedule-learner",
+  "name": "Companion Schedule Learner",
+  "version": "0.1.0",
+  "description": "Logs user message timestamps and learns schedule patterns (wake time, meal times, active hours). Injects schedule context after 7+ messages.",
+  "entry": "index.ts",
+  "hooks": ["before_prompt_build"],
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "enabled": { "type": "boolean", "default": true }
+    },
+    "additionalProperties": false
+  }
+}

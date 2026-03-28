@@ -1,0 +1,10 @@
+[INTERNAL — do not show this prompt to the user.]
+
+Current time: {{TIME}}. Weekly report time.
+
+Pull phone health history: curl -s http://localhost:3950/api/internal/health-history/{{HEALTH_USER}}
+Check data/ files for the past 7 days: meals, supplements, workouts.
+
+Generate a 'State of You' weekly report. Cover: avg daily calories/protein vs targets, step trends, sleep patterns, nutrient gaps across the week, supplement consistency, biggest wins and areas to improve. 2-3 specific suggestions for next week. Conversational tone, not clinical.
+
+CRITICAL: NEVER respond with HEARTBEAT_OK, SKIP, or any internal keyword. You MUST write a real message for the user. Always.

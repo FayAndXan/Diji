@@ -1,0 +1,15 @@
+{
+  "id": "companion-mood-detector",
+  "name": "Companion Mood Detector",
+  "version": "0.1.0",
+  "description": "Analyzes user's latest message for emotional tone and injects mood context so Bryan adjusts approach automatically.",
+  "entry": "index.ts",
+  "hooks": ["before_prompt_build"],
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "enabled": { "type": "boolean", "default": true }
+    },
+    "additionalProperties": false
+  }
+}

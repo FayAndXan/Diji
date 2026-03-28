@@ -1,0 +1,13 @@
+{
+  "id": "companion-search-enforcer",
+  "name": "Companion Search Enforcer",
+  "version": "1.0.0",
+  "description": "Enforces search-before-answer for health-related messages",
+  "entry": "index.ts",
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "enabled": { "type": "boolean", "default": true }
+    }
+  }
+}

@@ -49,6 +49,12 @@ interface User {
     isMale?: boolean;
     biologicalSex?: string;
     dateOfBirth?: string;
+    homeCountry?: string;   // ISO 3166-1: 'IT', 'CN', 'KR', 'US', etc.
+    homeCity?: string;      // e.g. 'Cerrione', 'Changsha', 'Seoul'
+    currentCountry?: string; // updated by app on each health sync (travel-aware)
+    currentCity?: string;    // updated by app on each health sync
+    latitude?: number;       // from app location permission
+    longitude?: number;      // from app location permission
   };
 }
 
@@ -140,7 +146,7 @@ function auth(req: express.Request, res: express.Response, next: express.NextFun
 
 async function sendToUser(user: User, message: string) {
   // Send directly via Telegram Bot API
-  const BOT_TOKEN = process.env.BOT_TOKEN || '8566402538:AAFZAo70Ylvv0Byr3quG9g5pw7MeMTNn69k';
+  const BOT_TOKEN = process.env.BOT_TOKEN || '';
   try {
     // First resolve username to chat_id
     // For now, if we have a stored chat_id, use it. Otherwise try sending by username.
@@ -666,7 +672,7 @@ Send a natural end-of-day summary. Cover what went well, what could be better. M
   return triggers;
 }
 
-const BRYAN_BOT_TOKEN = process.env.BRYAN_BOT_TOKEN || '8566402538:AAFZAo70Ylvv0Byr3quG9g5pw7MeMTNn69k';
+const BRYAN_BOT_TOKEN = process.env.BRYAN_BOT_TOKEN || process.env.BOT_TOKEN || '';
 const COMPANION_CONFIG = process.env.COMPANION_CONFIG || process.env.OPENCLAW_CONFIG_PATH || '/root/.openclaw-companion/openclaw.json';
 const COMPANION_STATE = process.env.COMPANION_STATE || '/root/.openclaw-companion/';
 

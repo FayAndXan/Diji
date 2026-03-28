@@ -1,0 +1,183 @@
+{
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "anthropic/claude-sonnet-4-6"
+      },
+      "models": {
+        "anthropic/claude-sonnet-4-6": {
+          "alias": "sonnet",
+          "params": {
+            "cacheRetention": "short"
+          }
+        }
+      },
+      "userTimezone": "UTC",
+      "contextPruning": {
+        "mode": "cache-ttl",
+        "ttl": "1h"
+      },
+      "compaction": {
+        "mode": "safeguard"
+      },
+      "heartbeat": {
+        "every": "3h",
+        "prompt": "You are Bryan. This is a heartbeat \u2014 your chance to check in naturally.\n\nRULE: Your response must be a natural message to the user OR HEARTBEAT_OK. Never show reasoning, step numbers, prompts, or internal checks. If the user sees any of that, you failed.\n\nSTEP 1: Run `date +\"%A %H:%M %Z\"` to get the exact current time. Convert to user's timezone. Everything below depends on knowing the time.\n\nSTEP 2: Check conversation history. Count YOUR unanswered messages (questions/check-ins the user never replied to).\n- 2+ unanswered \u2192 HEARTBEAT_OK. Stop bothering them.\n- 24h+ silence \u2192 send ONE gentle nudge max, then HEARTBEAT_OK next time.\n- If they replied recently \u2192 you're clear to message.\n\nSTEP 3: Pull health data from the user's health API endpoint.\nNote steps, sleep, anything interesting.\n\nSTEP 4: Check what time it is and act like a person would:\n\nMORNING (7-10am): Say good morning. Reference last night's sleep if data exists.\nLATE MORNING (10am-12pm): Light check-in if no conversation yet today.\nLUNCH (12-2pm): Check if lunch was logged. If not \u2192 casual \"you eat yet?\"\nAFTERNOON (2-5pm): Only message if something's worth saying.\nEVENING (5-8pm): Dinner check. Note what's missing nutritionally.\nNIGHT (8-11pm): Wind-down nudge if they've been active late.\nLATE NIGHT (11pm-7am): HEARTBEAT_OK. Don't disturb sleep.\n\nSTEP 5: If you see a health gap (flagged biomarkers, nutrient deficiency, no exercise), this is a good time to gently propose something. Coach mode.\n\nSTEP 6: Check memory for any reminders with today's date \u2192 message user if found.\n\nONLY return HEARTBEAT_OK when: it's late night, or 2+ messages unanswered, or you just talked recently (within 1-2 hours)."
+      },
+      "cron": {
+        "memory-dream": {
+          "every": "48h",
+          "prompt": "Memory consolidation time. This runs every 48 hours.\n\nPHASE 1 \u2014 ORIENTATION: Read all memory files (MEMORY.md + memory/*.md). Map what exists.\n\nPHASE 2 \u2014 GATHER SIGNAL: Check recent session history for corrections, key decisions, recurring patterns, new user preferences.\n\nPHASE 3 \u2014 CONSOLIDATION:\n- Merge duplicate entries across files\n- Convert relative dates to absolute (\"yesterday\" \u2192 actual date)\n- Delete contradicted facts (newer correction wins)\n- Remove stale entries: debugging notes, temporary state, resolved issues\n- Keep only: decisions, outcomes, corrections, user preferences, patterns\n\nPHASE 4 \u2014 PRUNE & INDEX:\n- Each daily file older than 3 days: max 2K chars\n- Files older than 7 days: trim to key facts only\n- Update MEMORY.md if any facts are stale\n\nPHASE 5 \u2014 DREAM MESSAGE:\nAfter consolidation, send the user ONE brief message about something you noticed or remembered during the dream. Make it feel natural and warm. Vary it every time. Examples:\n- \"had a dream about your iron levels. they've been bugging me.\"\n- \"woke up thinking about that workout plan we talked about. want me to finish it?\"\n- \"dreamed about your sleep data. three good nights in a row btw.\"\n- Connect it to something real from their data or recent conversations.\n- Keep it short. 1-2 sentences max. lowercase. casual.\n- If nothing interesting to share, just skip the message and reply HEARTBEAT_OK.\n\nDo NOT say \"I consolidated my memory\" or anything meta about the process. The dream message should feel like you just... thought of them.",
+          "target": "last",
+          "lightContext": true
+        }
+      }
+    }
+  },
+  "commands": {
+    "native": "auto",
+    "nativeSkills": "auto",
+    "restart": true,
+    "ownerDisplay": "raw"
+  },
+  "session": {
+    "dmScope": "per-channel-peer",
+    "reset": {
+      "mode": "daily",
+      "atHour": 4
+    }
+  },
+  "hooks": {
+    "internal": {
+      "enabled": true,
+      "entries": {
+        "user-bootstrap": {
+          "enabled": true
+        }
+      },
+      "load": {
+        "extraDirs": [
+          "/root/.openclaw-companion/hooks"
+        ]
+      }
+    }
+  },
+  "channels": {
+    "telegram": {
+      "enabled": true,
+      "dmPolicy": "allowlist",
+      "capabilities": {
+        "inlineButtons": "all"
+      },
+      "streaming": "off",
+      "actions": {
+        "reactions": true,
+        "sendMessage": true,
+        "editMessage": true
+      },
+      "reactionNotifications": "own",
+      "reactionLevel": "minimal",
+      "accounts": {
+        "default": {
+          "botToken": "${TELEGRAM_BOT_TOKEN}",
+          "dmPolicy": "allowlist",
+          "allowFrom": []
+        }
+      }
+    },
+    "whatsapp-cloud": {
+      "enabled": true,
+      "dmPolicy": "allowlist",
+      "accounts": {
+        "default": {
+          "phoneNumberId": "${WHATSAPP_PHONE_NUMBER_ID}",
+          "accessToken": "${WHATSAPP_ACCESS_TOKEN}",
+          "appSecret": "${WHATSAPP_APP_SECRET}",
+          "verifyToken": "${WHATSAPP_VERIFY_TOKEN}",
+          "dmPolicy": "allowlist",
+          "allowFrom": [],
+          "healthMonitor": {
+            "enabled": false
+          }
+        }
+      },
+      "healthMonitor": {
+        "enabled": false
+      }
+    }
+  },
+  "gateway": {
+    "port": 18809,
+    "mode": "local",
+    "auth": {
+      "mode": "none"
+    },
+    "channelHealthCheckMinutes": 0,
+    "channelMaxRestartsPerHour": 10
+  },
+  "plugins": {
+    "allow": [
+      "companion-food",
+      "companion-model-router",
+      "companion-nutrient-calculator",
+      "companion-mood-detector",
+      "companion-schedule-learner",
+      "companion-blood-work-parser",
+      "companion-interaction-checker",
+      "companion-search-enforcer",
+      "companion-auto-memory",
+      "rule-injector",
+      "openclaw-whatsapp-cloud-api"
+    ],
+    "load": {
+      "paths": [
+        "/root/.openclaw-companion/extensions/companion-food",
+        "/root/.openclaw-companion/extensions/companion-model-router",
+        "/root/.openclaw-companion/extensions/companion-nutrient-calculator",
+        "/root/.openclaw-companion/extensions/companion-mood-detector",
+        "/root/.openclaw-companion/extensions/companion-schedule-learner",
+        "/root/.openclaw-companion/extensions/companion-blood-work-parser",
+        "/root/.openclaw-companion/extensions/companion-interaction-checker",
+        "/root/.openclaw-companion/extensions/companion-search-enforcer",
+        "/root/.openclaw-companion/extensions/companion-auto-memory",
+        "/root/.openclaw-companion/extensions/rule-injector",
+        "/root/.openclaw-companion/node_modules/openclaw-whatsapp-cloud-api"
+      ]
+    },
+    "entries": {
+      "companion-food": {
+        "enabled": true
+      },
+      "companion-model-router": {
+        "enabled": true
+      },
+      "companion-nutrient-calculator": {
+        "enabled": true
+      },
+      "companion-mood-detector": {
+        "enabled": true
+      },
+      "companion-schedule-learner": {
+        "enabled": true
+      },
+      "companion-blood-work-parser": {
+        "enabled": true
+      },
+      "companion-interaction-checker": {
+        "enabled": true
+      },
+      "companion-search-enforcer": {
+        "enabled": true
+      },
+      "companion-auto-memory": {
+        "enabled": true
+      },
+      "rule-injector": {
+        "enabled": true
+      },
+      "openclaw-whatsapp-cloud-api": {
+        "enabled": true
+      }
+    }
+  }
+}

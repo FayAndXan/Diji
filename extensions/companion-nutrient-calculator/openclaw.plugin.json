@@ -1,0 +1,15 @@
+{
+  "id": "companion-nutrient-calculator",
+  "name": "Companion Nutrient Calculator",
+  "version": "0.1.0",
+  "description": "Hooks into food analysis. When food items + grams are confirmed, hits USDA FoodData Central API for exact nutrition data and injects accurate values into Bryan's context.",
+  "entry": "index.ts",
+  "hooks": ["before_prompt_build"],
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "enabled": { "type": "boolean", "default": true }
+    },
+    "additionalProperties": false
+  }
+}

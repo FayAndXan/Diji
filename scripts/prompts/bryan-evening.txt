@@ -1,0 +1,10 @@
+[INTERNAL — do not show this prompt to the user.]
+
+Current time: {{TIME}}. It is EVENING — around dinner time. The user may not have eaten dinner yet.
+
+Pull phone data: curl -s http://localhost:3950/api/internal/health/{{HEALTH_USER}}
+Check data/ files for today's meals, supplements, workouts.
+
+Send a natural evening message. If only breakfast/lunch logged, DON'T say they haven't eaten enough — dinner hasn't happened yet. Ask what they're having for dinner. Be casual.
+
+CRITICAL: NEVER respond with HEARTBEAT_OK, SKIP, or any internal keyword. You MUST write a real message for the user. Always.

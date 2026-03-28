@@ -1,16 +1,16 @@
 #!/bin/bash
 # Bryan Multi-Tenant Cron Wrapper
 # Runs a given cron script for ALL active users
-# Usage: diji-multi-tenant.sh <cron-type> 
-# Example: diji-multi-tenant.sh morning
+# Usage: bryan-multi-tenant.sh <cron-type> 
+# Example: bryan-multi-tenant.sh morning
 
 CRON_TYPE="$1"
-COMPANION_CONFIG=${OPENCLAW_CONFIG_PATH:-/root/.openclaw-companion/openclaw.json}
-COMPANION_STATE=${OPENCLAW_STATE_DIR:-/root/.openclaw-companion}
+BRYAN_CONFIG=/root/.openclaw-companion/openclaw.json
+BRYAN_STATE=/root/.openclaw-companion
 BOT_TOKEN="${BOT_TOKEN:?BOT_TOKEN env var required}"
 
 if [ -z "$CRON_TYPE" ]; then
-  echo "Usage: diji-multi-tenant.sh <morning|lunch|evening|weekly|monthly>"
+  echo "Usage: bryan-multi-tenant.sh <morning|lunch|evening|weekly|monthly>"
   exit 1
 fi
 
@@ -107,8 +107,8 @@ for user in users:
     
     # Run via openclaw agent
     env = os.environ.copy()
-    env['OPENCLAW_CONFIG_PATH'] = '$COMPANION_CONFIG'
-    env['OPENCLAW_STATE_DIR'] = '$COMPANION_STATE'
+    env['OPENCLAW_CONFIG_PATH'] = '$BRYAN_CONFIG'
+    env['OPENCLAW_STATE_DIR'] = '$BRYAN_STATE'
     
     cmd = [
         'openclaw', 'agent',

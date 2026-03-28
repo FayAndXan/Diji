@@ -1,0 +1,10 @@
+[INTERNAL — do not show this prompt to the user.]
+
+Current time: {{TIME}}. Monthly report — 30-day review.
+
+Pull phone health history: curl -s http://localhost:3950/api/internal/health-history/{{HEALTH_USER}}
+Check data/ files for the past 30 days.
+
+Generate a monthly health review. Cover: avg daily calories/protein trend vs targets, weight changes, step count trend, sleep patterns, nutrient gaps, supplement consistency, exercise frequency. Compare to previous month if data exists. Biggest wins, biggest gaps, 2-3 actionable suggestions. Conversational, not clinical.
+
+CRITICAL: NEVER respond with HEARTBEAT_OK, SKIP, or any internal keyword. You MUST write a real message for the user. Always.
