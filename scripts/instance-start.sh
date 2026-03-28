@@ -31,8 +31,15 @@ cleanup() {
 }
 trap cleanup SIGTERM SIGINT
 
+# Substitute env vars into config before starting
+cd /root/.openclaw-companion
+sed -i "s|\${TELEGRAM_BOT_TOKEN}|${TELEGRAM_BOT_TOKEN}|g" openclaw.json
+sed -i "s|\${ANTHROPIC_API_KEY}|${ANTHROPIC_API_KEY}|g" openclaw.json
+sed -i "s|\${OPENAI_API_KEY}|${OPENAI_API_KEY}|g" openclaw.json
+sed -i "s|\${TAVILY_API_KEY}|${TAVILY_API_KEY}|g" openclaw.json
+sed -i "s|\${SUPERMEMORY_API_KEY}|${SUPERMEMORY_API_KEY}|g" openclaw.json
+
 # Start OpenClaw gateway in foreground (container, no systemd)
 export OPENCLAW_CONFIG_PATH=/root/.openclaw-companion/openclaw.json
 export OPENCLAW_STATE_DIR=/root/.openclaw-companion
-cd /root/.openclaw-companion
 exec openclaw gateway run --allow-unconfigured

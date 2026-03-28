@@ -58,24 +58,17 @@
     "telegram": {
       "enabled": true,
       "dmPolicy": "open",
-      "capabilities": {
-        "inlineButtons": "all"
-      },
+      "groupPolicy": "allowlist",
       "streaming": "off",
-      "actions": {
-        "reactions": true,
-        "sendMessage": true,
-        "editMessage": true
-      },
-      "reactionNotifications": "own",
-      "reactionLevel": "minimal",
       "accounts": {
         "default": {
-          "botToken": "${TELEGRAM_BOT_TOKEN}",
           "dmPolicy": "open",
+          "botToken": "${TELEGRAM_BOT_TOKEN}",
           "allowFrom": [
             "*"
-          ]
+          ],
+          "groupPolicy": "allowlist",
+          "streaming": "off"
         }
       },
       "allowFrom": [
@@ -99,7 +92,14 @@
       "companion-interaction-checker",
       "companion-search-enforcer",
       "companion-auto-memory",
-      "rule-injector"
+      "rule-injector",
+      "telegram",
+      "anthropic",
+      "openai",
+      "tavily",
+      "google",
+      "memory-core",
+      "elevenlabs"
     ],
     "load": {
       "paths": [
@@ -149,6 +149,21 @@
       },
       "rule-injector": {
         "enabled": true
+      },
+      "telegram": {
+        "enabled": true
+      },
+      "anthropic": {
+        "enabled": true
+      },
+      "openai": {
+        "enabled": true
+      },
+      "tavily": {
+        "enabled": true
+      },
+      "google": {
+        "enabled": true
       }
     }
   },
@@ -159,5 +174,15 @@
         "provider": "tavily"
       }
     }
+  },
+  "meta": {
+    "lastTouchedVersion": "2026.3.24",
+    "lastTouchedAt": "2026-03-28T12:00:00.000Z"
+  },
+  "wizard": {
+    "lastRunAt": "2026-03-28T12:00:00.000Z",
+    "lastRunVersion": "2026.3.24",
+    "lastRunCommand": "doctor",
+    "lastRunMode": "local"
   }
 }
