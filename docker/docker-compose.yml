@@ -62,6 +62,8 @@ services:
     volumes:
       # Per-instance user data — each replica gets its own volume
       - openclaw-userdata-${HOSTNAME:-default}:/root/.openclaw-companion/data/users
+      # WeChat session files (host-mounted, contains login token)
+      - /root/.openclaw-companion/openclaw-weixin:/root/.openclaw-companion/openclaw-weixin
     deploy:
       replicas: 1
       resources:

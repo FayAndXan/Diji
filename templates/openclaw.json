@@ -98,7 +98,18 @@
       },
       "healthMonitor": {
         "enabled": false
-      }
+      },
+      "phoneNumberId": "${WHATSAPP_PHONE_NUMBER_ID}",
+      "accessToken": "${WHATSAPP_ACCESS_TOKEN}",
+      "appSecret": "${WHATSAPP_APP_SECRET}",
+      "verifyToken": "${WHATSAPP_VERIFY_TOKEN}"
+    },
+    "openclaw-weixin": {
+      "enabled": true,
+      "dmPolicy": "open",
+      "allowFrom": [
+        "*"
+      ]
     }
   },
   "gateway": {
@@ -125,7 +136,8 @@
       "google",
       "memory-core",
       "elevenlabs",
-      "openclaw-whatsapp-cloud-api"
+      "openclaw-whatsapp-cloud-api",
+      "openclaw-weixin"
     ],
     "load": {
       "paths": [
@@ -190,6 +202,9 @@
         "enabled": true
       },
       "google": {
+        "enabled": true
+      },
+      "openclaw-weixin": {
         "enabled": true
       }
     }
