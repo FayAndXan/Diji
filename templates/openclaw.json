@@ -110,7 +110,13 @@
     "port": 18809,
     "mode": "local",
     "auth": {
-      "mode": "none"
+      "mode": "token",
+      "token": "${OPENCLAW_GATEWAY_TOKEN}"
+    },
+    "http": {
+      "endpoints": {
+        "chatCompletions": { "enabled": true }
+      }
     },
     "channelHealthCheckMinutes": 0,
     "channelMaxRestartsPerHour": 10
