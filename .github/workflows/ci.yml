@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate JSON configs
+        run: |
+          node -e "JSON.parse(require('fs').readFileSync('templates/openclaw.json','utf-8')); console.log('✅ openclaw.json')"
+          for f in extensions/*/openclaw.plugin.json; do
+            node -e "JSON.parse(require('fs').readFileSync('$f','utf-8')); console.log('✅ $f')"
+          done
+
+      - name: JS syntax check
+        run: |
+          for f in extensions/auth-gate/index.js extensions/rule-injector/index.js extensions/rule-injector/user-resolver.js extensions/rule-injector/templates.js extensions/memory-provider/index.js gateway/router/index.js; do
+            node --check "$f" && echo "✅ $f"
+          done
+
+      - name: Plugin manifest validation
+        run: |
+          node -e "
+            const fs = require('fs');
+            const cfg = JSON.parse(fs.readFileSync('templates/openclaw.json','utf-8'));
+            const entries = Object.keys(cfg.plugins.entries);
+            const paths = cfg.plugins.load.paths.map(p => p.split('/').pop());
+            const missing = entries.filter(e => !paths.some(p => p === e || p.includes(e)));
+            if (missing.length) { console.error('❌ Missing paths:', missing); process.exit(1); }
+            console.log('✅ All', entries.length, 'plugin entries have load paths');
+          "
+
+      - name: Docker build
+        run: docker build -f docker/Dockerfile.openclaw -t diji-openclaw .
+
+      - name: Verify container contents
+        run: |
+          docker run --rm diji-openclaw node -e "
+            const fs = require('fs');
+            const cfg = JSON.parse(fs.readFileSync('/root/.openclaw-companion/openclaw.json','utf-8'));
+            const paths = cfg.plugins.load.paths;
+            let ok = true;
+            paths.forEach(p => {
+              if (!fs.existsSync(p)) { console.error('❌ Missing:', p); ok = false; }
+            });
+            if (!ok) process.exit(1);
+            console.log('✅ All', paths.length, 'plugin paths exist in container');
+          "
+          docker run --rm diji-openclaw python3 --version
+          docker run --rm diji-openclaw curl --version | head -1
