@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -986,11 +1019,248 @@ app.post('/api/auth/verify', (req, res) => {
     (0, fs_1.writeFileSync)(authPath, JSON.stringify(pending, null, 2));
     res.json({ token: user.token, userId: user.id });
 });
+// ─── Chat Proxy (REST → OpenClaw Gateway WS) ────────────────────
+const ws_1 = __importDefault(require("ws"));
+// @ts-ignore
+const ed = __importStar(require("@noble/ed25519"));
+const crypto_2 = require("crypto");
+const GATEWAY_WS_URL = process.env.GATEWAY_WS_URL || 'ws://openclaw:18789';
+const GATEWAY_TOKEN = process.env.OPENCLAW_GATEWAY_TOKEN || '';
+let deviceIdentity = null;
+function base64url(buf) {
+    return Buffer.from(buf).toString('base64url');
+}
+async function getDeviceIdentity() {
+    if (deviceIdentity)
+        return deviceIdentity;
+    const privateKey = ed.utils.randomSecretKey();
+    const publicKey = await ed.getPublicKeyAsync(privateKey);
+    const deviceId = (0, crypto_2.createHash)('sha256').update(publicKey).digest('hex');
+    deviceIdentity = { deviceId, publicKey: base64url(publicKey), privateKey };
+    console.log('[ChatProxy] Device identity:', deviceId.substring(0, 16) + '...');
+    return deviceIdentity;
+}
+function createGatewayConnection() {
+    return new Promise(async (resolve, reject) => {
+        const identity = await getDeviceIdentity();
+        const ws = new ws_1.default(GATEWAY_WS_URL, {
+            headers: { 'Origin': 'http://localhost:18789' }
+        });
+        const conn = { ws, ready: false, pendingMessages: [] };
+        let connected = false;
+        ws.on('open', () => { });
+        ws.on('message', async (data) => {
+            try {
+                const msg = JSON.parse(data.toString());
+                if (msg.type === 'event' && msg.event === 'connect.challenge') {
+                    const nonce = msg.payload?.nonce || '';
+                    const signedAt = Date.now();
+                    const clientId = 'webchat-ui';
+                    const clientMode = 'webchat';
+                    const role = 'operator';
+                    const scopes = ['operator.admin', 'operator.read', 'operator.write'];
+                    const signPayload = ['v2', identity.deviceId, clientId, clientMode, role, scopes.join(','), String(signedAt), GATEWAY_TOKEN || '', nonce].join('|');
+                    const sig = await ed.signAsync(new TextEncoder().encode(signPayload), identity.privateKey);
+                    ws.send(JSON.stringify({
+                        type: 'req', id: 'connect-1', method: 'connect',
+                        params: {
+                            minProtocol: 3, maxProtocol: 3,
+                            client: { id: clientId, version: '1.0.0', platform: 'linux', mode: clientMode },
+                            role, scopes, caps: ['tool-events'],
+                            auth: { token: GATEWAY_TOKEN },
+                            device: {
+                                id: identity.deviceId,
+                                publicKey: identity.publicKey,
+                                signature: base64url(sig),
+                                signedAt,
+                                nonce
+                            },
+                            locale: 'en-US',
+                            userAgent: 'companion-server/1.0.0'
+                        }
+                    }));
+                    return;
+                }
+                if (msg.type === 'res' && msg.id === 'connect-1') {
+                    if (msg.ok) {
+                        conn.ready = true;
+                        connected = true;
+                        const auth = msg.payload?.auth;
+                        console.log('[ChatProxy] Connected. Scopes:', JSON.stringify(auth?.scopes || 'none'));
+                        resolve(conn);
+                    }
+                    else {
+                        console.error('[ChatProxy] Connect failed:', JSON.stringify(msg.error));
+                        reject(new Error(`Gateway connect failed: ${JSON.stringify(msg.error || msg)}`));
+                    }
+                    return;
+                }
+                if (msg.type === 'event' && msg.event === 'chat') {
+                    const payload = msg.payload;
+                    if (!payload)
+                        return;
+                    const pending = conn.pendingMessages.find(p => p.runId === payload.runId);
+                    if (!pending)
+                        return;
+                    if (payload.state === 'delta') {
+                        // Accumulate streaming text
+                        if (payload.message) {
+                            const text = typeof payload.message === 'string'
+                                ? payload.message
+                                : (payload.message.content || payload.message.text || '');
+                            if (text)
+                                pending.segments.push(text);
+                        }
+                    }
+                    if (payload.state === 'final') {
+                        // Extract final text
+                        let finalText = '';
+                        if (payload.message) {
+                            if (typeof payload.message === 'string') {
+                                finalText = payload.message;
+                            }
+                            else if (Array.isArray(payload.message)) {
+                                finalText = payload.message
+                                    .filter((b) => b.type === 'text')
+                                    .map((b) => b.text)
+                                    .join('');
+                            }
+                            else if (payload.message.content) {
+                                if (typeof payload.message.content === 'string') {
+                                    finalText = payload.message.content;
+                                }
+                                else if (Array.isArray(payload.message.content)) {
+                                    finalText = payload.message.content
+                                        .filter((b) => b.type === 'text')
+                                        .map((b) => b.text)
+                                        .join('');
+                                }
+                            }
+                        }
+                        // If no final text, use accumulated segments
+                        if (!finalText && pending.segments.length > 0) {
+                            finalText = pending.segments.join('');
+                        }
+                        // Remove from pending
+                        conn.pendingMessages = conn.pendingMessages.filter(p => p.runId !== payload.runId);
+                        pending.resolve(finalText || 'sorry, i got nothing.');
+                    }
+                }
+                // Handle chat.send response (just acknowledge, real response comes via events)
+                if (msg.type === 'res' && msg.id?.startsWith('chat-')) {
+                    const runId = msg.id.replace('chat-', '');
+                    if (!msg.ok) {
+                        console.error('[ChatProxy] chat.send failed:', JSON.stringify(msg.error || msg));
+                        const pending = conn.pendingMessages.find(p => p.runId === runId);
+                        if (pending) {
+                            conn.pendingMessages = conn.pendingMessages.filter(p => p.runId !== runId);
+                            pending.reject(new Error(msg.error?.message || 'chat.send failed'));
+                        }
+                    }
+                    else {
+                        console.log('[ChatProxy] chat.send accepted for run:', runId);
+                    }
+                }
+                // Log all events for debugging
+                if (msg.type === 'event') {
+                    console.log('[ChatProxy] Event:', msg.event, JSON.stringify(msg.payload || {}).substring(0, 200));
+                }
+            }
+            catch (err) {
+                console.error('[ChatProxy] Parse error:', err);
+            }
+        });
+        ws.on('error', (err) => {
+            console.error('[ChatProxy] WS error:', err.message);
+            if (!connected)
+                reject(err);
+            // Reject all pending
+            conn.pendingMessages.forEach(p => p.reject(new Error('Gateway connection lost')));
+            conn.pendingMessages = [];
+        });
+        ws.on('close', () => {
+            console.log('[ChatProxy] WS closed');
+            conn.ready = false;
+            conn.pendingMessages.forEach(p => p.reject(new Error('Gateway connection closed')));
+            conn.pendingMessages = [];
+        });
+        // Timeout
+        setTimeout(() => {
+            if (!connected) {
+                ws.close();
+                reject(new Error('Gateway connection timeout'));
+            }
+        }, 10000);
+    });
+}
+// Connection pool (one per process for now, scale later with pool)
+let gatewayConn = null;
+async function getGatewayConnection() {
+    if (gatewayConn && gatewayConn.ready && gatewayConn.ws.readyState === ws_1.default.OPEN) {
+        return gatewayConn;
+    }
+    gatewayConn = await createGatewayConnection();
+    return gatewayConn;
+}
+app.post('/api/chat', auth, async (req, res) => {
+    const user = req.user;
+    const { message, sessionKey: customSessionKey } = req.body;
+    if (!message) {
+        return res.status(400).json({ error: 'Missing message' });
+    }
+    // Build session key — app users get their own session
+    const sessionKey = customSessionKey || `agent:main:app:direct:${user.id}`;
+    const runId = (0, crypto_1.randomUUID)();
+    try {
+        const conn = await getGatewayConnection();
+        const responsePromise = new Promise((resolve, reject) => {
+            conn.pendingMessages.push({ resolve, reject, runId, sessionKey, segments: [] });
+            // Send chat.send
+            conn.ws.send(JSON.stringify({
+                type: 'req',
+                id: `chat-${runId}`,
+                method: 'chat.send',
+                params: {
+                    sessionKey,
+                    message,
+                    idempotencyKey: runId
+                }
+            }));
+            // 60s timeout
+            setTimeout(() => {
+                const idx = conn.pendingMessages.findIndex(p => p.runId === runId);
+                if (idx !== -1) {
+                    conn.pendingMessages.splice(idx, 1);
+                    reject(new Error('Chat response timeout'));
+                }
+            }, 60000);
+        });
+        const responseText = await responsePromise;
+        res.json({
+            message: responseText,
+            sessionKey,
+            runId
+        });
+    }
+    catch (err) {
+        console.error('[ChatProxy] Error:', err.message);
+        // Reset connection on failure
+        if (gatewayConn) {
+            try {
+                gatewayConn.ws.close();
+            }
+            catch { }
+            gatewayConn = null;
+        }
+        res.status(502).json({ error: 'Failed to reach Bryan', detail: err.message });
+    }
+});
 // Health check
 app.get('/health', (_, res) => res.json({ status: 'ok', uptime: process.uptime() }));
 // ─── Start ───────────────────────────────────────────────────────
 app.listen(PORT, () => {
     console.log(`[Companion] Server running on port ${PORT}`);
     console.log(`[Companion] OpenClaw gateway: ${OPENCLAW_GATEWAY}`);
+    console.log(`[Companion] Gateway WS: ${GATEWAY_WS_URL}`);
 });
 //# sourceMappingURL=index.js.map

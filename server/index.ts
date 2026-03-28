@@ -1231,6 +1231,268 @@ app.post('/api/auth/verify', (req, res) => {
   res.json({ token: (user as any).token, userId: (user as any).id });
 });
 
+// ─── Chat Proxy (REST → OpenClaw Gateway WS) ────────────────────
+import WebSocket from 'ws';
+// @ts-ignore
+import * as ed from '@noble/ed25519';
+import { createHash as cryptoCreateHash } from 'crypto';
+
+const GATEWAY_WS_URL = process.env.GATEWAY_WS_URL || 'ws://openclaw:18789';
+const GATEWAY_TOKEN = process.env.OPENCLAW_GATEWAY_TOKEN || '';
+
+let deviceIdentity: { deviceId: string; publicKey: string; privateKey: Uint8Array } | null = null;
+
+function base64url(buf: Uint8Array): string {
+  return Buffer.from(buf).toString('base64url');
+}
+
+async function getDeviceIdentity() {
+  if (deviceIdentity) return deviceIdentity;
+  const privateKey = (ed.utils as any).randomSecretKey();
+  const publicKey = await ed.getPublicKeyAsync(privateKey);
+  const deviceId = cryptoCreateHash('sha256').update(publicKey).digest('hex');
+  deviceIdentity = { deviceId, publicKey: base64url(publicKey), privateKey };
+  console.log('[ChatProxy] Device identity:', deviceId.substring(0, 16) + '...');
+  return deviceIdentity;
+}
+
+interface GatewayChatConnection {
+  ws: WebSocket;
+  ready: boolean;
+  pendingMessages: Array<{ resolve: (text: string) => void; reject: (err: Error) => void; runId: string; sessionKey: string; segments: string[] }>;
+}
+
+function createGatewayConnection(): Promise<GatewayChatConnection> {
+  return new Promise(async (resolve, reject) => {
+    const identity = await getDeviceIdentity();
+    const ws = new WebSocket(GATEWAY_WS_URL, {
+      headers: { 'Origin': 'http://localhost:18789' }
+    });
+    const conn: GatewayChatConnection = { ws, ready: false, pendingMessages: [] };
+    let connected = false;
+
+    ws.on('open', () => {});
+
+    ws.on('message', async (data: WebSocket.Data) => {
+      try {
+        const msg = JSON.parse(data.toString());
+
+        if (msg.type === 'event' && msg.event === 'connect.challenge') {
+          const nonce = msg.payload?.nonce || '';
+          const signedAt = Date.now();
+          const clientId = 'webchat-ui';
+          const clientMode = 'webchat';
+          const role = 'operator';
+          const scopes = ['operator.admin', 'operator.read', 'operator.write'];
+          
+          const signPayload = ['v2', identity.deviceId, clientId, clientMode, role, scopes.join(','), String(signedAt), GATEWAY_TOKEN || '', nonce].join('|');
+          const sig = await ed.signAsync(new TextEncoder().encode(signPayload), identity.privateKey);
+
+          ws.send(JSON.stringify({
+            type: 'req', id: 'connect-1', method: 'connect',
+            params: {
+              minProtocol: 3, maxProtocol: 3,
+              client: { id: clientId, version: '1.0.0', platform: 'linux', mode: clientMode },
+              role, scopes, caps: ['tool-events'],
+              auth: { token: GATEWAY_TOKEN },
+              device: {
+                id: identity.deviceId,
+                publicKey: identity.publicKey,
+                signature: base64url(sig),
+                signedAt,
+                nonce
+              },
+              locale: 'en-US',
+              userAgent: 'companion-server/1.0.0'
+            }
+          }));
+          return;
+        }
+
+        if (msg.type === 'res' && msg.id === 'connect-1') {
+          if (msg.ok) {
+            conn.ready = true;
+            connected = true;
+            const auth = msg.payload?.auth;
+            console.log('[ChatProxy] Connected. Scopes:', JSON.stringify(auth?.scopes || 'none'));
+            resolve(conn);
+          } else {
+            console.error('[ChatProxy] Connect failed:', JSON.stringify(msg.error));
+            reject(new Error(`Gateway connect failed: ${JSON.stringify(msg.error || msg)}`));
+          }
+          return;
+        }
+
+        if (msg.type === 'event' && msg.event === 'chat') {
+          const payload = msg.payload;
+          if (!payload) return;
+
+          const pending = conn.pendingMessages.find(p => p.runId === payload.runId);
+          if (!pending) return;
+
+          if (payload.state === 'delta') {
+            // Accumulate streaming text
+            if (payload.message) {
+              const text = typeof payload.message === 'string' 
+                ? payload.message 
+                : (payload.message.content || payload.message.text || '');
+              if (text) pending.segments.push(text);
+            }
+          }
+
+          if (payload.state === 'final') {
+            // Extract final text
+            let finalText = '';
+            if (payload.message) {
+              if (typeof payload.message === 'string') {
+                finalText = payload.message;
+              } else if (Array.isArray(payload.message)) {
+                finalText = payload.message
+                  .filter((b: any) => b.type === 'text')
+                  .map((b: any) => b.text)
+                  .join('');
+              } else if (payload.message.content) {
+                if (typeof payload.message.content === 'string') {
+                  finalText = payload.message.content;
+                } else if (Array.isArray(payload.message.content)) {
+                  finalText = payload.message.content
+                    .filter((b: any) => b.type === 'text')
+                    .map((b: any) => b.text)
+                    .join('');
+                }
+              }
+            }
+
+            // If no final text, use accumulated segments
+            if (!finalText && pending.segments.length > 0) {
+              finalText = pending.segments.join('');
+            }
+
+            // Remove from pending
+            conn.pendingMessages = conn.pendingMessages.filter(p => p.runId !== payload.runId);
+            pending.resolve(finalText || 'sorry, i got nothing.');
+          }
+        }
+
+        // Handle chat.send response (just acknowledge, real response comes via events)
+        if (msg.type === 'res' && msg.id?.startsWith('chat-')) {
+          const runId = msg.id.replace('chat-', '');
+          if (!msg.ok) {
+            console.error('[ChatProxy] chat.send failed:', JSON.stringify(msg.error || msg));
+            const pending = conn.pendingMessages.find(p => p.runId === runId);
+            if (pending) {
+              conn.pendingMessages = conn.pendingMessages.filter(p => p.runId !== runId);
+              pending.reject(new Error(msg.error?.message || 'chat.send failed'));
+            }
+          } else {
+            console.log('[ChatProxy] chat.send accepted for run:', runId);
+          }
+        }
+        
+        // Log all events for debugging
+        if (msg.type === 'event') {
+          console.log('[ChatProxy] Event:', msg.event, JSON.stringify(msg.payload || {}).substring(0, 200));
+        }
+
+      } catch (err) {
+        console.error('[ChatProxy] Parse error:', err);
+      }
+    });
+
+    ws.on('error', (err) => {
+      console.error('[ChatProxy] WS error:', err.message);
+      if (!connected) reject(err);
+      // Reject all pending
+      conn.pendingMessages.forEach(p => p.reject(new Error('Gateway connection lost')));
+      conn.pendingMessages = [];
+    });
+
+    ws.on('close', () => {
+      console.log('[ChatProxy] WS closed');
+      conn.ready = false;
+      conn.pendingMessages.forEach(p => p.reject(new Error('Gateway connection closed')));
+      conn.pendingMessages = [];
+    });
+
+    // Timeout
+    setTimeout(() => {
+      if (!connected) {
+        ws.close();
+        reject(new Error('Gateway connection timeout'));
+      }
+    }, 10000);
+  });
+}
+
+// Connection pool (one per process for now, scale later with pool)
+let gatewayConn: GatewayChatConnection | null = null;
+
+async function getGatewayConnection(): Promise<GatewayChatConnection> {
+  if (gatewayConn && gatewayConn.ready && gatewayConn.ws.readyState === WebSocket.OPEN) {
+    return gatewayConn;
+  }
+  gatewayConn = await createGatewayConnection();
+  return gatewayConn;
+}
+
+app.post('/api/chat', auth, async (req: any, res: any) => {
+  const user = req.user;
+  const { message, sessionKey: customSessionKey } = req.body;
+
+  if (!message) {
+    return res.status(400).json({ error: 'Missing message' });
+  }
+
+  // Build session key — app users get their own session
+  const sessionKey = customSessionKey || `agent:main:app:direct:${user.id}`;
+  const runId = randomUUID();
+
+  try {
+    const conn = await getGatewayConnection();
+
+    const responsePromise = new Promise<string>((resolve, reject) => {
+      conn.pendingMessages.push({ resolve, reject, runId, sessionKey, segments: [] });
+
+      // Send chat.send
+      conn.ws.send(JSON.stringify({
+        type: 'req',
+        id: `chat-${runId}`,
+        method: 'chat.send',
+        params: {
+          sessionKey,
+          message,
+          idempotencyKey: runId
+        }
+      }));
+
+      // 60s timeout
+      setTimeout(() => {
+        const idx = conn.pendingMessages.findIndex(p => p.runId === runId);
+        if (idx !== -1) {
+          conn.pendingMessages.splice(idx, 1);
+          reject(new Error('Chat response timeout'));
+        }
+      }, 60000);
+    });
+
+    const responseText = await responsePromise;
+    res.json({
+      message: responseText,
+      sessionKey,
+      runId
+    });
+
+  } catch (err: any) {
+    console.error('[ChatProxy] Error:', err.message);
+    // Reset connection on failure
+    if (gatewayConn) {
+      try { gatewayConn.ws.close(); } catch {}
+      gatewayConn = null;
+    }
+    res.status(502).json({ error: 'Failed to reach Bryan', detail: err.message });
+  }
+});
+
 // Health check
 app.get('/health', (_, res) => res.json({ status: 'ok', uptime: process.uptime() }));
 
@@ -1239,4 +1501,5 @@ app.get('/health', (_, res) => res.json({ status: 'ok', uptime: process.uptime()
 app.listen(PORT, () => {
   console.log(`[Companion] Server running on port ${PORT}`);
   console.log(`[Companion] OpenClaw gateway: ${OPENCLAW_GATEWAY}`);
+  console.log(`[Companion] Gateway WS: ${GATEWAY_WS_URL}`);
 });
