@@ -59,12 +59,12 @@ export default function register(api) {
     const user = findUserByPeer(channel, peerId);
     if (user) return; // registered user, let through
     
-    // Unregistered user — claim the event and send canned reply
+    // Unregistered user — claim the event so LLM doesn't run (zero cost)
+    // Gate reply is sent by user-bootstrap hook via raw Telegram/WhatsApp API
     console.log(`[auth-gate] BLOCKED unregistered user ${channel}:${peerId}`);
     
     return {
-      claimed: true,
-      reply: "hey! to get started, download the app and create an account first, then come back and we'll talk."
+      claimed: true
     };
   });
 }
