@@ -81,6 +81,7 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - SUPERMEMORY_API_KEY=${SUPERMEMORY_API_KEY}
       - RESEND_API_KEY=${RESEND_API_KEY}
+      - OPENCLAW_GATEWAY_TOKEN=${OPENCLAW_GATEWAY_TOKEN}
     volumes:
       - companion-data:/app/data
     depends_on:
