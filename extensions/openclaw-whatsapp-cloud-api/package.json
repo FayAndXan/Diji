@@ -1,0 +1,68 @@
+{
+  "name": "openclaw-whatsapp-cloud-api",
+  "version": "1.1.1",
+  "description": "WhatsApp Cloud API channel plugin for OpenClaw \u2014 official Meta Business API, no Baileys",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "src",
+    "!src/__tests__",
+    "openclaw.plugin.json"
+  ],
+  "openclaw": {
+    "extensions": [
+      "./src/index.ts"
+    ],
+    "channel": {
+      "id": "whatsapp-cloud",
+      "label": "WhatsApp Cloud API",
+      "selectionLabel": "WhatsApp (Meta Cloud API)",
+      "docsPath": "/channels/whatsapp-cloud",
+      "docsLabel": "whatsapp-cloud",
+      "blurb": "WhatsApp channel via Meta's official Cloud API. Production-safe, no ban risk.",
+      "order": 20,
+      "aliases": [
+        "wa-cloud",
+        "whatsapp-business",
+        "wa-business"
+      ]
+    },
+    "install": {
+      "npmSpec": "openclaw-whatsapp-cloud-api",
+      "localPath": "extensions/whatsapp-cloud",
+      "defaultChoice": "npm"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint src/ --ext .ts",
+    "lint:fix": "eslint src/ --ext .ts --fix",
+    "test": "vitest run",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "openclaw",
+    "whatsapp",
+    "cloud-api",
+    "meta",
+    "channel",
+    "plugin",
+    "chatbot",
+    "business-api"
+  ],
+  "author": "Marco Costantino",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mcostantino-dev/openclaw-whatsapp-cloud-api"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}

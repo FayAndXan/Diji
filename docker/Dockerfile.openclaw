@@ -3,9 +3,8 @@
 
 FROM node:22-slim
 
-# Install OpenClaw + our WhatsApp fork
+# Install OpenClaw
 RUN npm install -g openclaw
-RUN npm install -g github:FayAndXan/openclaw-whatsapp-cloud-api
 
 # Create directory structure
 RUN mkdir -p /root/.openclaw-companion/.openclaw/workspace \

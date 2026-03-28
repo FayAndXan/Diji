@@ -141,7 +141,7 @@
         "/root/.openclaw-companion/extensions/companion-search-enforcer",
         "/root/.openclaw-companion/extensions/companion-auto-memory",
         "/root/.openclaw-companion/extensions/rule-injector",
-        "/root/.openclaw-companion/node_modules/openclaw-whatsapp-cloud-api"
+        "/root/.openclaw-companion/extensions/openclaw-whatsapp-cloud-api"
       ]
     },
     "entries": {
