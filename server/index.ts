@@ -690,7 +690,7 @@ function canFireTrigger(userId: string, type: string, cooldownMs = 3600000): boo
 // Track which trigger types fired today (persisted per-user for cron dedup)
 function markTriggerFired(userId: string, type: string) {
   const path = join(DATA_DIR, `triggers-today-${userId}.json`);
-  let today: Record<string, number> = {};
+  let today: Record<string, string | number> = {};
   if (existsSync(path)) {
     try { today = JSON.parse(readFileSync(path, 'utf-8')); } catch {}
   }

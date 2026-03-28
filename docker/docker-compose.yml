@@ -61,7 +61,7 @@ services:
       # Per-instance user data — each replica gets its own volume
       - openclaw-userdata-${HOSTNAME:-default}:/root/.openclaw-companion/data/users
     deploy:
-      replicas: 3
+      replicas: 1
       resources:
         limits:
           memory: 2G
