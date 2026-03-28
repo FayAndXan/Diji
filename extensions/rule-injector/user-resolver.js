@@ -15,7 +15,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 
-const DATA_DIR = '/root/.openclaw/workspace/projects/companion/server/data';
+const DATA_DIR = process.env.COMPANION_DATA_DIR || '/app/data';
 const USER_DATA_DIR = process.env.USER_DATA_DIR || '/root/.openclaw-companion/.openclaw/workspace/data/users';
 
 /**

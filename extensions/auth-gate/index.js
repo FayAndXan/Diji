@@ -5,7 +5,7 @@
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 
-const DATA_DIR = '/root/.openclaw/workspace/projects/companion/server/data';
+const DATA_DIR = process.env.COMPANION_DATA_DIR || '/app/data';
 
 function loadUsers() {
   const path = join(DATA_DIR, 'users.json');
