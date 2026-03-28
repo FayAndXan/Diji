@@ -267,7 +267,7 @@ app.post('/api/register', (req, res) => {
     const existingByEmail = Object.values(users).find(u => (u as any).email === email.toLowerCase());
     if (existingByEmail) {
       console.log(`[Companion] Existing user found by email: ${email} → ${(existingByEmail as any).id}`);
-      return res.json({ token: (existingByEmail as any).token, agentId: (existingByEmail as any).id });
+      return res.json({ token: (existingByEmail as any).token, agentId: (existingByEmail as any).id, gatewayToken: process.env.OPENCLAW_GATEWAY_TOKEN || '' });
     }
   }
   
@@ -275,7 +275,7 @@ app.post('/api/register', (req, res) => {
   if (device_id) {
     const existing = Object.values(users).find(u => u.deviceId === device_id);
     if (existing) {
-      return res.json({ token: existing.token, agentId: existing.id });
+      return res.json({ token: existing.token, agentId: existing.id, gatewayToken: process.env.OPENCLAW_GATEWAY_TOKEN || '' });
     }
   }
   
@@ -305,7 +305,7 @@ app.post('/api/register', (req, res) => {
   
   console.log(`[Companion] New user registered: ${email || telegram_username || id} (${companion_name || 'Bryan'}) channel=${chat_channel || 'none'}`);
   
-  res.json({ token, agentId: id });
+  res.json({ token, agentId: id, gatewayToken: process.env.OPENCLAW_GATEWAY_TOKEN || '' });
 });
 
 // Receive screen time data from iOS app
