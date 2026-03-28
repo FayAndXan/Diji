@@ -55,6 +55,8 @@ services:
       - WHATSAPP_ACCESS_TOKEN=${WHATSAPP_ACCESS_TOKEN}
       - WHATSAPP_APP_SECRET=${WHATSAPP_APP_SECRET}
       - WHATSAPP_VERIFY_TOKEN=${WHATSAPP_VERIFY_TOKEN}
+    ports:
+      - "3100:3100"  # WhatsApp Cloud API webhook
     depends_on:
       - redis
     volumes:

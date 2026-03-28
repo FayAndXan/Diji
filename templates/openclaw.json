@@ -74,6 +74,31 @@
       "allowFrom": [
         "*"
       ]
+    },
+    "whatsapp-cloud": {
+      "enabled": true,
+      "dmPolicy": "open",
+      "allowFrom": [
+        "*"
+      ],
+      "accounts": {
+        "default": {
+          "phoneNumberId": "${WHATSAPP_PHONE_NUMBER_ID}",
+          "accessToken": "${WHATSAPP_ACCESS_TOKEN}",
+          "appSecret": "${WHATSAPP_APP_SECRET}",
+          "verifyToken": "${WHATSAPP_VERIFY_TOKEN}",
+          "dmPolicy": "open",
+          "allowFrom": [
+            "*"
+          ],
+          "healthMonitor": {
+            "enabled": false
+          }
+        }
+      },
+      "healthMonitor": {
+        "enabled": false
+      }
     }
   },
   "gateway": {
@@ -99,7 +124,8 @@
       "tavily",
       "google",
       "memory-core",
-      "elevenlabs"
+      "elevenlabs",
+      "openclaw-whatsapp-cloud-api"
     ],
     "load": {
       "paths": [
@@ -113,7 +139,8 @@
         "/root/.openclaw-companion/extensions/companion-interaction-checker",
         "/root/.openclaw-companion/extensions/companion-search-enforcer",
         "/root/.openclaw-companion/extensions/companion-auto-memory",
-        "/root/.openclaw-companion/extensions/rule-injector"
+        "/root/.openclaw-companion/extensions/rule-injector",
+        "/root/.openclaw-companion/extensions/openclaw-whatsapp-cloud-api"
       ]
     },
     "entries": {

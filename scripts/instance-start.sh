@@ -38,6 +38,10 @@ sed -i "s|\${ANTHROPIC_API_KEY}|${ANTHROPIC_API_KEY}|g" openclaw.json
 sed -i "s|\${OPENAI_API_KEY}|${OPENAI_API_KEY}|g" openclaw.json
 sed -i "s|\${TAVILY_API_KEY}|${TAVILY_API_KEY}|g" openclaw.json
 sed -i "s|\${SUPERMEMORY_API_KEY}|${SUPERMEMORY_API_KEY}|g" openclaw.json
+sed -i "s|\${WHATSAPP_PHONE_NUMBER_ID}|${WHATSAPP_PHONE_NUMBER_ID}|g" openclaw.json
+sed -i "s|\${WHATSAPP_ACCESS_TOKEN}|${WHATSAPP_ACCESS_TOKEN}|g" openclaw.json
+sed -i "s|\${WHATSAPP_APP_SECRET}|${WHATSAPP_APP_SECRET}|g" openclaw.json
+sed -i "s|\${WHATSAPP_VERIFY_TOKEN}|${WHATSAPP_VERIFY_TOKEN}|g" openclaw.json
 
 # Start OpenClaw gateway in foreground (container, no systemd)
 export OPENCLAW_CONFIG_PATH=/root/.openclaw-companion/openclaw.json
