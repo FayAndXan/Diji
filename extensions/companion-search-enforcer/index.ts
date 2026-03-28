@@ -69,9 +69,9 @@ export default function searchEnforcer(api: any) {
         const enforcement = `\n\n[SEARCH ENFORCEMENT — MANDATORY — SYSTEM LEVEL]
 ⛔ HEALTH/FOOD CONTENT DETECTED. THIS IS A HARD BLOCK, NOT A SUGGESTION.
 
-YOUR FIRST ACTION must be a Spectrawl search. Before you type ANY food name, supplement name, health claim, or recommendation:
+YOUR FIRST ACTION must be a web_search call. Before you type ANY food name, supplement name, health claim, or recommendation:
 
-curl -s http://localhost:3900/search -X POST -H 'Content-Type: application/json' -d '{"query":"<relevant search>"}'
+web_search({ query: "<relevant health search>" })
 
 DO NOT:
 - List foods from memory
@@ -85,7 +85,7 @@ SEARCH FIRST. THEN ANSWER. NO EXCEPTIONS. NOT EVEN "COMMON KNOWLEDGE."
 `;
         
         log('Injecting search enforcement (HARD BLOCK)');
-        return { prompt: prompt + enforcement };
+        return { appendSystemContext: enforcement };
       } else {
         log('Search already used — no enforcement needed');
       }
