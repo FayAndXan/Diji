@@ -90,7 +90,7 @@ export default async (event: any) => {
         // Read bot token from Bryan's config
         const cfgRaw = readFileSync(process.env.OPENCLAW_CONFIG_PATH || '/root/.openclaw-companion/openclaw.json', 'utf-8');
         const cfg = JSON.parse(cfgRaw);
-        const botToken = cfg?.channels?.telegram?.accounts?.default?.token;
+        const botToken = cfg?.channels?.telegram?.accounts?.default?.botToken || cfg?.channels?.telegram?.accounts?.default?.token;
         if (botToken) {
           const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
           await fetch(url, {

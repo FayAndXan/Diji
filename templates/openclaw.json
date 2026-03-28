@@ -117,6 +117,7 @@
   },
   "plugins": {
     "allow": [
+      "auth-gate",
       "companion-food",
       "companion-model-router",
       "companion-nutrient-calculator",
@@ -131,6 +132,7 @@
     ],
     "load": {
       "paths": [
+        "/root/.openclaw-companion/extensions/auth-gate",
         "/root/.openclaw-companion/extensions/companion-food",
         "/root/.openclaw-companion/extensions/companion-model-router",
         "/root/.openclaw-companion/extensions/companion-nutrient-calculator",
@@ -145,6 +147,9 @@
       ]
     },
     "entries": {
+      "auth-gate": {
+        "enabled": true
+      },
       "companion-food": {
         "enabled": true
       },

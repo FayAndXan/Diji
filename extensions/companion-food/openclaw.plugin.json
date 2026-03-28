@@ -1,9 +1,10 @@
 {
   "name": "companion-food",
   "version": "0.1.0",
-  "description": "Food photo analysis — identifies ingredients, asks for portions, calculates full micronutrient breakdown",
-  "main": "index.ts",
-  "hooks": ["before_prompt_build"],
+  "description": "Food photo analysis \u2014 identifies ingredients, asks for portions, calculates full micronutrient breakdown",
+  "hooks": [
+    "before_prompt_build"
+  ],
   "id": "companion-food",
   "configSchema": {
     "type": "object",
@@ -13,5 +14,6 @@
       }
     },
     "additionalProperties": false
-  }
+  },
+  "entry": "index.ts"
 }
