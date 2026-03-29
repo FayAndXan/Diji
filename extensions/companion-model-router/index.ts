@@ -166,17 +166,21 @@ export default function register(api: any) {
   debugLog("companion-model-router plugin registered");
   
   // Use before_agent_start (legacy but supports both messages + modelOverride).
-  // before_model_resolve runs pre-session with NO messages — can't check user input.
-  // before_prompt_build has messages but can't return modelOverride.
-  // before_agent_start has BOTH.
+  // Only override model on first message of a session. Once a session has a model
+  // locked, don't try to change it — the gateway rejects mid-session switches
+  // and enters an infinite retry loop.
   api.on("before_agent_start", (event: any, ctx: any) => {
     try {
+      // Skip if session already has messages (model is locked)
+      const messages = event?.messages;
+      if (messages && Array.isArray(messages) && messages.length > 1) {
+        // Session already running — don't override
+        debugLog('Session active, skipping model override');
+        return;
+      }
+
       const { model, reason } = selectModel(event);
       debugLog(`Routing to ${model} (${reason})`);
-      // Return model override only. All our models are currently Anthropic
-      // so no provider switch needed. providerOverride requires
-      // modelOverrides.allowProvider which is TTS-only config.
-      // If we add non-Anthropic models later, we'll need a different approach.
       const modelName = model.includes('/') ? model.split('/').pop() : model;
       return { modelOverride: modelName };
     } catch (err) {
