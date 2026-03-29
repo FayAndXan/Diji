@@ -60,7 +60,10 @@ ENV OPENCLAW_CONFIG_PATH=/root/.openclaw-companion/openclaw.json
 ENV OPENCLAW_STATE_DIR=/root/.openclaw-companion
 
 # Symlink workspace so OpenClaw finds it at $HOME/.openclaw/workspace
-RUN mkdir -p /root/.openclaw && ln -sf /root/.openclaw-companion/workspace /root/.openclaw/workspace
+# Symlink extensions so OpenClaw auto-discovers them
+RUN mkdir -p /root/.openclaw && \
+    ln -sf /root/.openclaw-companion/workspace /root/.openclaw/workspace && \
+    ln -sf /root/.openclaw-companion/extensions /root/.openclaw/extensions
 
 EXPOSE 18809
 
