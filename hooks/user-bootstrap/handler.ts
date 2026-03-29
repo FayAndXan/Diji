@@ -126,32 +126,11 @@ export default async (event: any) => {
   
   const user = await lookupUser(channel, peerId);
   if (!user) {
-    log(`No user found for ${channel}:${peerId} — GATED (sending canned reply via API)`);
+    log(`No user found for ${channel}:${peerId} — guest user, rule-injector will handle reply`);
     
-    // Send canned reply directly via Telegram/WhatsApp API — ZERO LLM cost
-    const gateMsg = "hey! to get started, download the app and create an account first, then come back and we'll talk.\n\nhttps://dijicomp.com";
-    
-    if (channel === 'telegram') {
-      try {
-        // Read bot token from Bryan's config
-        const cfgRaw = readFileSync(process.env.OPENCLAW_CONFIG_PATH || '/root/.openclaw-companion/openclaw.json', 'utf-8');
-        const cfg = JSON.parse(cfgRaw);
-        const botToken = cfg?.channels?.telegram?.accounts?.default?.botToken || cfg?.channels?.telegram?.accounts?.default?.token;
-        if (botToken) {
-          const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
-          await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chat_id: peerId, text: gateMsg }),
-          });
-          log(`Sent gate reply via Telegram API to ${peerId}`);
-        }
-      } catch (err) {
-        log(`Failed to send Telegram gate reply: ${err}`);
-      }
-    }
-    
-    // Wipe bootstrap files so even if agent runs, it has no context
+    // Don't send a message here — rule-injector injects a guest SOUL that makes the agent
+    // send the gate reply. Sending here too would cause double messages.
+    // Just wipe bootstrap files so the agent has minimal context.
     if (context.bootstrapFiles) {
       context.bootstrapFiles = [];
     }
