@@ -10,7 +10,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends python3 curl &&
 RUN npm install -g openclaw
 
 # Create directory structure
-RUN mkdir -p /root/.openclaw-companion/.openclaw/workspace \
+# workspace at $OPENCLAW_STATE_DIR/workspace = /root/.openclaw-companion/workspace
+RUN mkdir -p /root/.openclaw-companion/workspace \
     /root/.openclaw-companion/extensions \
     /root/.openclaw-companion/hooks/user-bootstrap \
     /root/.openclaw-companion/data/users \
@@ -30,8 +31,7 @@ COPY hooks/ /root/.openclaw-companion/hooks/
 COPY templates/openclaw.json /root/.openclaw-companion/openclaw.json
 
 # Copy companion-specific workspace (SOUL.md, AGENTS.md, etc.)
-# This gets overridden at runtime by the companion template mount
-COPY templates/companion/.openclaw/workspace/ /root/.openclaw-companion/.openclaw/workspace/
+COPY templates/companion/.openclaw/workspace/ /root/.openclaw-companion/workspace/
 
 # Copy cron scripts and prompts
 COPY scripts/ /usr/local/bin/diji-scripts/
@@ -51,8 +51,8 @@ RUN chmod +x /usr/local/bin/instance-start.sh
 ENV OPENCLAW_CONFIG_PATH=/root/.openclaw-companion/openclaw.json
 ENV OPENCLAW_STATE_DIR=/root/.openclaw-companion
 
-# Symlink so OpenClaw finds workspace at default $HOME/.openclaw/workspace
-RUN ln -sf /root/.openclaw-companion/.openclaw /root/.openclaw
+# No symlink needed - OPENCLAW_STATE_DIR points to /root/.openclaw-companion
+# workspace is at /root/.openclaw-companion/workspace
 
 EXPOSE 18809
 
