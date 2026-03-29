@@ -83,7 +83,7 @@ services:
       - SUPERMEMORY_API_KEY=${SUPERMEMORY_API_KEY}
       - RESEND_API_KEY=${RESEND_API_KEY}
       - OPENCLAW_GATEWAY_TOKEN=${OPENCLAW_GATEWAY_TOKEN}
-      - GATEWAY_WS_URL=ws://openclaw:18809
+      - GATEWAY_WS_URL=ws://openclaw:18789
     volumes:
       - companion-data:/app/data
     depends_on:

@@ -1076,7 +1076,7 @@ const ws_1 = __importDefault(require("ws"));
 // @ts-ignore
 const ed = __importStar(require("@noble/ed25519"));
 const crypto_2 = require("crypto");
-const GATEWAY_WS_URL = process.env.GATEWAY_WS_URL || 'ws://openclaw:18809';
+const GATEWAY_WS_URL = process.env.GATEWAY_WS_URL || 'ws://openclaw:18789';
 const GATEWAY_TOKEN = process.env.OPENCLAW_GATEWAY_TOKEN || '';
 let deviceIdentity = null;
 function base64url(buf) {
