@@ -43,6 +43,33 @@ sed -i "s|\${WHATSAPP_ACCESS_TOKEN}|${WHATSAPP_ACCESS_TOKEN}|g" openclaw.json
 sed -i "s|\${WHATSAPP_APP_SECRET}|${WHATSAPP_APP_SECRET}|g" openclaw.json
 sed -i "s|\${WHATSAPP_VERIFY_TOKEN}|${WHATSAPP_VERIFY_TOKEN}|g" openclaw.json
 
+# Start cron daemon (for scheduled reports, check-ins)
+if command -v cron >/dev/null 2>&1; then
+  # Install crontab for multi-tenant cron jobs
+  # All times in UTC — scripts convert to per-user timezone
+  cat > /tmp/bryan-crontab <<'CRONTAB'
+# Bryan multi-tenant crons (UTC)
+# Morning check-in: 23:00 UTC = 7am CST, staggered for timezones
+0 23 * * * /usr/local/bin/bryan-crons/bryan-multi-tenant.sh morning >> /tmp/bryan-cron.log 2>&1
+# Lunch reminder: 04:00 UTC = 12pm CST
+0 4 * * * /usr/local/bin/bryan-crons/bryan-multi-tenant.sh lunch >> /tmp/bryan-cron.log 2>&1
+# Evening/dinner: 10:00 UTC = 6pm CST
+0 10 * * * /usr/local/bin/bryan-crons/bryan-multi-tenant.sh evening >> /tmp/bryan-cron.log 2>&1
+# Daily report: 14:00 UTC = 10pm CST
+0 14 * * * /usr/local/bin/bryan-crons/bryan-daily-report.sh >> /tmp/bryan-cron.log 2>&1
+# Weekly report: Sunday 14:00 UTC
+0 14 * * 0 /usr/local/bin/bryan-crons/bryan-multi-tenant.sh weekly >> /tmp/bryan-cron.log 2>&1
+# Monthly report: 1st of month 14:00 UTC
+0 14 1 * * /usr/local/bin/bryan-crons/bryan-multi-tenant.sh monthly >> /tmp/bryan-cron.log 2>&1
+CRONTAB
+
+  # Pass env vars to cron
+  env | grep -E '^(BOT_TOKEN|TELEGRAM_BOT_TOKEN|BRYAN_|OPENCLAW_|ANTHROPIC_|OPENAI_|COMPANION_|PATH)=' >> /tmp/bryan-crontab
+  crontab /tmp/bryan-crontab
+  cron
+  echo "[diji-instance] Cron daemon started"
+fi
+
 # Start OpenClaw gateway in foreground (container, no systemd)
 export OPENCLAW_CONFIG_PATH=/root/.openclaw-companion/openclaw.json
 export OPENCLAW_STATE_DIR=/root/.openclaw-companion
