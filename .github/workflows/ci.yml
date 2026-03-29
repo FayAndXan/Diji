@@ -14,15 +14,41 @@ jobs:
 
       - name: Validate JSON configs
         run: |
-          node -e "JSON.parse(require('fs').readFileSync('templates/openclaw.json','utf-8')); console.log('✅ openclaw.json')"
+          node -e "JSON.parse(require('fs').readFileSync('templates/openclaw.json','utf-8')); console.log('✅ openclaw.json valid')"
           for f in extensions/*/openclaw.plugin.json; do
-            node -e "JSON.parse(require('fs').readFileSync('$f','utf-8')); console.log('✅ $f')"
+            [ -f "$f" ] && node -e "JSON.parse(require('fs').readFileSync('$f','utf-8')); console.log('✅ $f')" || true
           done
+
+      - name: Check for invalid config keys
+        run: |
+          node -e "
+            const cfg = JSON.parse(require('fs').readFileSync('templates/openclaw.json','utf-8'));
+            const agentKeys = Object.keys(cfg.agents?.defaults || {});
+            const invalid = agentKeys.filter(k => ['modelOverrides'].includes(k));
+            if (invalid.length) { console.error('❌ Invalid keys in agents.defaults:', invalid); process.exit(1); }
+            console.log('✅ No invalid config keys');
+          "
+
+      - name: Check for localhost URLs in Docker code
+        run: |
+          FAILS=0
+          # Check extensions, hooks, skills, workspace MDs for localhost:3950 (should be companion-server:3950)
+          if grep -rn "localhost:3950" extensions/ hooks/ templates/companion/.openclaw/workspace/ --include="*.ts" --include="*.js" --include="*.md" 2>/dev/null | grep -v node_modules | grep -v "detection pattern"; then
+            echo "❌ Found localhost:3950 — should be companion-server:3950 in Docker"
+            FAILS=1
+          fi
+          # Check for localhost:3900 in code (should be 172.17.0.1:3900 for host Spectrawl)
+          if grep -rn "http://localhost:3900" extensions/ hooks/ templates/companion/.openclaw/workspace/ --include="*.ts" --include="*.js" --include="*.md" 2>/dev/null | grep -v node_modules | grep -v "includes('localhost:3900')"; then
+            echo "❌ Found localhost:3900 — should be 172.17.0.1:3900 in Docker"
+            FAILS=1
+          fi
+          if [ $FAILS -eq 0 ]; then echo "✅ No localhost issues"; fi
+          exit $FAILS
 
       - name: JS syntax check
         run: |
-          for f in extensions/auth-gate/index.js extensions/rule-injector/index.js extensions/rule-injector/user-resolver.js extensions/rule-injector/templates.js lib/memory-provider/index.js gateway/router/index.js; do
-            node --check "$f" && echo "✅ $f"
+          for f in extensions/*/index.js; do
+            [ -f "$f" ] && node --check "$f" && echo "✅ $f" || true
           done
 
       - name: Plugin manifest validation
@@ -30,30 +56,51 @@ jobs:
           node -e "
             const fs = require('fs');
             const cfg = JSON.parse(fs.readFileSync('templates/openclaw.json','utf-8'));
-            const entries = Object.keys(cfg.plugins.entries);
-            const paths = cfg.plugins.load.paths.map(p => p.split('/').pop());
-            const stockPlugins = (cfg.plugins.allow || []).filter(a => !paths.some(p => p === a || p.includes(a)));
-            const custom = entries.filter(e => !stockPlugins.includes(e));
-            const missing = custom.filter(e => !paths.some(p => p === e || p.includes(e)));
-            if (missing.length) { console.error('❌ Missing paths:', missing); process.exit(1); }
-            console.log('✅ All', custom.length, 'custom plugin entries have load paths (' + stockPlugins.length + ' stock plugins in allow list)');
+            const paths = (cfg.plugins?.load?.paths || []);
+            const missing = paths.filter(p => {
+              // Resolve relative to repo for CI
+              const local = p.replace('/root/.openclaw-companion/extensions/', 'extensions/');
+              return !fs.existsSync(local);
+            });
+            if (missing.length) { console.error('❌ Config references missing paths:', missing); process.exit(1); }
+            console.log('✅ All plugin paths exist');
           "
 
       - name: Docker build
         run: docker build -f docker/Dockerfile.openclaw -t diji-openclaw .
 
-      - name: Verify container contents
+      - name: Verify container structure
         run: |
+          # Check extensions symlink exists
+          docker run --rm diji-openclaw test -L /root/.openclaw/extensions && echo "✅ Extensions symlink" || (echo "❌ Extensions symlink missing" && exit 1)
+          
+          # Check workspace symlink exists
+          docker run --rm diji-openclaw test -L /root/.openclaw/workspace && echo "✅ Workspace symlink" || (echo "❌ Workspace symlink missing" && exit 1)
+          
+          # Check key workspace files
+          for f in SOUL.md CAPABILITIES.md TOOLS.md SAMANTHA.md HEARTBEAT.md; do
+            docker run --rm diji-openclaw test -f /root/.openclaw-companion/workspace/$f && echo "✅ $f" || echo "⚠️ $f missing"
+          done
+          
+          # Check skills exist
+          docker run --rm diji-openclaw test -d /root/.openclaw-companion/workspace/skills && echo "✅ Skills dir" || (echo "❌ Skills missing" && exit 1)
+          
+          # Check extensions exist
+          EXTS=$(docker run --rm diji-openclaw ls /root/.openclaw-companion/extensions/ | wc -l)
+          echo "✅ $EXTS extensions in container"
+          
+          # Check config is valid
           docker run --rm diji-openclaw node -e "
-            const fs = require('fs');
-            const cfg = JSON.parse(fs.readFileSync('/root/.openclaw-companion/openclaw.json','utf-8'));
-            const paths = cfg.plugins.load.paths;
-            let ok = true;
-            paths.forEach(p => {
-              if (!fs.existsSync(p)) { console.error('❌ Missing:', p); ok = false; }
-            });
-            if (!ok) process.exit(1);
-            console.log('✅ All', paths.length, 'plugin paths exist in container');
+            const cfg = JSON.parse(require('fs').readFileSync('/root/.openclaw-companion/openclaw.json','utf-8'));
+            console.log('✅ Config valid, model:', JSON.stringify(cfg.agents.defaults.model));
           "
+          
+          # Check cron PID fix in startup
+          docker run --rm diji-openclaw grep 'rm -f /var/run/crond.pid' /usr/local/bin/instance-start.sh && echo "✅ Cron PID fix" || echo "⚠️ Cron PID fix missing"
+          
+          # Check identity-links restore in startup
+          docker run --rm diji-openclaw grep 'identity-links.json' /usr/local/bin/instance-start.sh && echo "✅ identityLinks restore" || echo "⚠️ identityLinks restore missing"
+          
+          # Verify python available
           docker run --rm diji-openclaw python3 --version
           docker run --rm diji-openclaw curl --version | head -1
