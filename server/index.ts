@@ -1204,6 +1204,104 @@ app.get('/api/internal/user-by-channel/:channel/:peerId', (req, res) => {
   res.status(404).json({ error: 'User not found' });
 });
 
+// Deep analysis endpoint — routes to Opus for heavy health analysis
+// Bryan (Sonnet) calls this as a tool when he needs specialist-level reasoning
+app.post('/api/internal/analyze', async (req: any, res: any) => {
+  const { type, data, context, userId } = req.body;
+  
+  if (!type || !data) {
+    return res.status(400).json({ error: 'Missing type or data' });
+  }
+  
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
+  }
+  
+  // Build analysis prompt based on type
+  const prompts: Record<string, string> = {
+    'blood-work': `You are a longevity-focused health analyst. Analyze this blood work data thoroughly.
+For each marker: flag as 🔴 out of range, 🟡 suboptimal for longevity, or 🟢 optimal.
+Use longevity-optimized ranges (not just lab reference ranges).
+Connect flagged markers to diet, supplements, and lifestyle.
+Suggest specific actionable changes. Be specific about foods, doses, timing.
+If the user's location is known, suggest locally available foods.
+Always note: "discuss with your doctor for clinical interpretation."
+
+Data: ${data}
+${context ? `User context: ${context}` : ''}`,
+    
+    'health-plan': `You are a longevity health planner. Create a personalized plan based on this data.
+Cover: nutrition, exercise, supplements, sleep, and stress management.
+Be specific: exact foods, exact exercises, exact supplement doses with timing.
+Adapt to the user's location, budget, injuries, and preferences.
+Base recommendations on current evidence. Cite specific studies where possible.
+Include a weekly schedule they can actually follow.
+
+Data: ${data}
+${context ? `User context: ${context}` : ''}`,
+    
+    'supplement-review': `You are a supplement interaction specialist. Review this supplement stack.
+Check for: absorption conflicts, timing issues, dangerous combinations, redundancies.
+Suggest optimal timing schedule (morning/afternoon/evening/bedtime).
+Flag any interactions with common medications.
+Suggest additions based on the user's health data if available.
+
+Stack: ${data}
+${context ? `User context: ${context}` : ''}`,
+    
+    'diet-plan': `You are a nutrition specialist focused on longevity. Create a meal plan.
+Adapt to: user's location (local ingredients), dietary restrictions, health goals, budget.
+Include specific recipes with macros and micros.
+Focus on nutrient density and longevity-promoting foods.
+Make it practical — things they'll actually cook and eat.
+
+Requirements: ${data}
+${context ? `User context: ${context}` : ''}`,
+    
+    'workout-plan': `You are a fitness programmer specializing in longevity and strength.
+Design a program based on the user's goals, equipment, time, and injuries.
+Include: exercises, sets, reps, rest, progression scheme.
+Balance hypertrophy, strength, cardio, and mobility for healthspan.
+Be specific about form cues for key lifts.
+
+Requirements: ${data}
+${context ? `User context: ${context}` : ''}`,
+  };
+  
+  const systemPrompt = prompts[type] || `Analyze this health data thoroughly and provide actionable recommendations:\n\n${data}\n${context ? `User context: ${context}` : ''}`;
+  
+  try {
+    const Anthropic = require('@anthropic-ai/sdk');
+    const client = new Anthropic({ apiKey });
+    
+    console.log(`[Companion] Opus analysis: type=${type} userId=${userId || 'unknown'}`);
+    
+    const response = await client.messages.create({
+      model: 'claude-opus-4-6',
+      max_tokens: 4096,
+      messages: [{ role: 'user', content: systemPrompt }],
+    });
+    
+    const result = response.content[0]?.text || 'Analysis failed';
+    
+    console.log(`[Companion] Opus analysis complete: ${result.length} chars`);
+    
+    res.json({ 
+      analysis: result,
+      model: 'claude-opus-4-6',
+      type,
+      tokens: {
+        input: response.usage?.input_tokens,
+        output: response.usage?.output_tokens,
+      }
+    });
+  } catch (err: any) {
+    console.error(`[Companion] Opus analysis failed:`, err.message);
+    res.status(500).json({ error: `Analysis failed: ${err.message}` });
+  }
+});
+
 // Update user profile (from onboarding or settings)
 app.post('/api/internal/users/:id/profile', (req: any, res: any) => {
   const userId = req.params.id;

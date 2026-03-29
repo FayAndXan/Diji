@@ -115,7 +115,14 @@ Don't dump all of these. Pick what fits THEIR situation.`
 - Health history: curl -s http://companion-server:3950/api/internal/health-history/${tgUsername}
 - Write meal: curl -s -X POST http://companion-server:3950/api/internal/command -H 'Content-Type: application/json' -d '{"telegramUsername":"${tgUsername}","type":"write_meal","payload":{"meal":"..."}}'
 - Meal files: ${userDataDir}/meals-YYYY-MM-DD.json
-- Health: ${userDataDir}/health/`;
+- Health: ${userDataDir}/health/
+### DEEP ANALYSIS (Opus — use for complex health tasks):
+When you need deep analysis (blood work interpretation, health plans, supplement reviews, diet plans, workout programs), call this endpoint. It routes to Opus for specialist-level reasoning.
+- curl -s -X POST http://companion-server:3950/api/internal/analyze -H 'Content-Type: application/json' -d '{"type":"TYPE","data":"...","context":"user info","userId":"${userId}"}'
+- Types: blood-work, health-plan, supplement-review, diet-plan, workout-plan
+- Returns: {"analysis":"...detailed result...","model":"claude-opus-4-6"}
+- Use the analysis result in your response to the user. Don't just forward it raw — summarize and present it in your voice.
+- ONLY use this for genuinely complex analysis. Routine food logging, check-ins, casual chat = you handle directly.`;
 
     // Per-user profile context
     const profileContext = userProfile 

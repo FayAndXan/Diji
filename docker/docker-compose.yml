@@ -110,6 +110,7 @@ services:
       - RESEND_API_KEY=${RESEND_API_KEY}
       - OPENCLAW_GATEWAY_TOKEN=${OPENCLAW_GATEWAY_TOKEN}
       - GATEWAY_WS_URL=ws://openclaw:18789
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
     volumes:
       - companion-data:/app/data
     depends_on:
