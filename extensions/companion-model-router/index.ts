@@ -173,14 +173,12 @@ export default function register(api: any) {
     try {
       const { model, reason } = selectModel(event);
       debugLog(`Routing to ${model} (${reason})`);
-      // Return both provider and model override.
-      // Requires modelOverrides.allowProvider: true in openclaw.json.
-      // This allows routing across providers (Anthropic, Kimi, etc.)
-      if (model.includes('/')) {
-        const [provider, ...rest] = model.split('/');
-        return { providerOverride: provider, modelOverride: rest.join('/') };
-      }
-      return { modelOverride: model };
+      // Return model override only. All our models are currently Anthropic
+      // so no provider switch needed. providerOverride requires
+      // modelOverrides.allowProvider which is TTS-only config.
+      // If we add non-Anthropic models later, we'll need a different approach.
+      const modelName = model.includes('/') ? model.split('/').pop() : model;
+      return { modelOverride: modelName };
     } catch (err) {
       debugLog(`Error: ${err}`);
       // Fall through to default
