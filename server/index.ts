@@ -32,6 +32,7 @@ interface User {
   createdAt: string;
   creatureState: 'glowing' | 'calm' | 'concerned' | 'wilting' | 'sleeping';
   channelLinks?: ChannelLink[];
+  linkToken?: string;
   lastScreenTime?: ScreenTimeData;
   lastHealth?: HealthData;
   healthProfile?: {
@@ -264,10 +265,16 @@ app.post('/api/register', (req, res) => {
   
   // Check if email already registered (cross-channel linking)
   if (email) {
-    const existingByEmail = Object.values(users).find(u => (u as any).email === email.toLowerCase());
+    const existingByEmail = Object.values(users).find(u => (u as any).email === email.toLowerCase()) as any;
     if (existingByEmail) {
-      console.log(`[Companion] Existing user found by email: ${email} → ${(existingByEmail as any).id}`);
-      return res.json({ token: (existingByEmail as any).token, agentId: (existingByEmail as any).id, gatewayToken: process.env.OPENCLAW_GATEWAY_TOKEN || '' });
+      // Generate linkToken if missing (legacy user)
+      if (!existingByEmail.linkToken) {
+        existingByEmail.linkToken = randomUUID().replace(/-/g, '').substring(0, 12);
+        users[existingByEmail.id] = existingByEmail;
+        saveUsers(users);
+      }
+      console.log(`[Companion] Existing user found by email: ${email} → ${existingByEmail.id}`);
+      return res.json({ token: existingByEmail.token, agentId: existingByEmail.id, linkToken: existingByEmail.linkToken, gatewayToken: process.env.OPENCLAW_GATEWAY_TOKEN || '' });
     }
   }
   
@@ -281,6 +288,7 @@ app.post('/api/register', (req, res) => {
   
   const id = randomUUID();
   const token = randomUUID();
+  const linkToken = randomUUID().replace(/-/g, '').substring(0, 12); // short token for deep links
   
   const user: User = {
     id,
@@ -292,6 +300,7 @@ app.post('/api/register', (req, res) => {
     createdAt: new Date().toISOString(),
     creatureState: 'calm',
     channelLinks: [],
+    linkToken,
   };
   
   users[id] = user;
@@ -303,9 +312,9 @@ app.post('/api/register', (req, res) => {
     mkdirSync(join(userDataDir, 'health'), { recursive: true });
   }
   
-  console.log(`[Companion] New user registered: ${email || telegram_username || id} (${companion_name || 'Bryan'}) channel=${chat_channel || 'none'}`);
+  console.log(`[Companion] New user registered: ${email || telegram_username || id} (${companion_name || 'Bryan'}) channel=${chat_channel || 'none'} linkToken=${linkToken}`);
   
-  res.json({ token, agentId: id, gatewayToken: process.env.OPENCLAW_GATEWAY_TOKEN || '' });
+  res.json({ token, agentId: id, linkToken, gatewayToken: process.env.OPENCLAW_GATEWAY_TOKEN || '' });
 });
 
 // Receive screen time data from iOS app
@@ -1112,8 +1121,59 @@ app.post('/api/internal/link-channel', (req, res) => {
   res.json({ ok: true });
 });
 
+// Link Telegram via deep link token (/start link_XXXX)
+app.post('/api/internal/link-by-token', (req: any, res: any) => {
+  const { linkToken, channel, peerId } = req.body;
+  if (!linkToken || !channel || !peerId) {
+    return res.status(400).json({ error: 'Missing linkToken, channel, or peerId' });
+  }
+  
+  const users = getUsers();
+  const user = Object.values(users).find((u: any) => u.linkToken === linkToken) as any;
+  if (!user) {
+    return res.status(404).json({ error: 'Invalid link token' });
+  }
+  
+  // Link the channel
+  if (!user.channelLinks) user.channelLinks = [];
+  const exists = user.channelLinks.some((l: any) => l.channel === channel && String(l.peerId) === String(peerId));
+  if (!exists) {
+    user.channelLinks.push({ channel, peerId: String(peerId), linkedAt: new Date().toISOString() });
+  }
+  
+  // Also set telegramChatId for backwards compat
+  if (channel === 'telegram') {
+    user.telegramChatId = String(peerId);
+  }
+  
+  users[user.id] = user;
+  saveUsers(users);
+  
+  console.log(`[Companion] Channel linked via token: ${channel}:${peerId} → user ${user.id} (${user.email})`);
+  
+  // Also update OpenClaw config (allowFrom + identityLinks)
+  try {
+    const configPath = process.env.OPENCLAW_CONFIG_PATH || '/root/.openclaw-companion/openclaw.json';
+    const config = JSON.parse(readFileSync(configPath, 'utf-8'));
+    
+    const channelKey = channel === 'whatsapp-cloud' ? 'whatsapp-cloud' : channel;
+    if (config.channels?.[channelKey]) {
+      if (!config.channels[channelKey].allowFrom) config.channels[channelKey].allowFrom = [];
+      if (!config.channels[channelKey].allowFrom.includes(String(peerId))) {
+        config.channels[channelKey].allowFrom.push(String(peerId));
+      }
+    }
+    
+    writeFileSync(configPath, JSON.stringify(config, null, 2));
+  } catch (err) {
+    console.error(`[Companion] Failed to update OpenClaw config: ${err}`);
+  }
+  
+  res.json({ ok: true, userId: user.id, email: user.email });
+});
+
 // List all users (internal, for crons)
-app.get('/api/internal/users', (req, res) => {
+app.get('/api/internal/users', (req: any, res: any) => {
   const users = getUsers();
   const list = Object.entries(users).map(([id, user]) => ({
     id,

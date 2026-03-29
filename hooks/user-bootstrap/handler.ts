@@ -78,12 +78,58 @@ export default async (event: any) => {
     return;
   }
   
+  // Check if this is a /start deep link with a link token
+  const inboundText = event.text || event.message || '';
+  const linkMatch = typeof inboundText === 'string' ? inboundText.match(/^\/start\s+link_(\w+)/) : null;
+  
+  if (linkMatch && linkMatch[1]) {
+    const linkToken = linkMatch[1];
+    log(`Deep link detected: link token=${linkToken} from ${channel}:${peerId}`);
+    
+    try {
+      const linkRes = await fetch('http://localhost:3950/api/internal/link-by-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ linkToken, channel, peerId }),
+      });
+      
+      if (linkRes.ok) {
+        const linkData = await linkRes.json() as any;
+        log(`Channel linked successfully: ${channel}:${peerId} → ${linkData.userId}`);
+        
+        // Send welcome via Telegram API
+        if (channel === 'telegram') {
+          try {
+            const cfgRaw = readFileSync(process.env.OPENCLAW_CONFIG_PATH || '/root/.openclaw-companion/openclaw.json', 'utf-8');
+            const cfg = JSON.parse(cfgRaw);
+            const botToken = cfg?.channels?.telegram?.accounts?.default?.botToken || cfg?.channels?.telegram?.accounts?.default?.token;
+            if (botToken) {
+              await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chat_id: peerId, text: "hey, you're all set. i can see your health data now. how are you feeling?" }),
+              });
+              log(`Sent welcome message to ${peerId}`);
+            }
+          } catch (err) {
+            log(`Failed to send welcome: ${err}`);
+          }
+        }
+        return; // Don't run agent for the /start command
+      } else {
+        log(`Link token invalid or expired: ${linkToken}`);
+      }
+    } catch (err) {
+      log(`Failed to link channel: ${err}`);
+    }
+  }
+  
   const user = await lookupUser(channel, peerId);
   if (!user) {
     log(`No user found for ${channel}:${peerId} — GATED (sending canned reply via API)`);
     
     // Send canned reply directly via Telegram/WhatsApp API — ZERO LLM cost
-    const gateMsg = "hey! to get started, download the app and create an account first, then come back and we'll talk.";
+    const gateMsg = "hey! to get started, download the app and create an account first, then come back and we'll talk.\n\nhttps://dijicomp.com";
     
     if (channel === 'telegram') {
       try {
@@ -104,7 +150,6 @@ export default async (event: any) => {
         log(`Failed to send Telegram gate reply: ${err}`);
       }
     }
-    // TODO: Add WhatsApp Cloud API and WeChat direct sends
     
     // Wipe bootstrap files so even if agent runs, it has no context
     if (context.bootstrapFiles) {
