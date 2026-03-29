@@ -88,8 +88,9 @@ if command -v cron >/dev/null 2>&1; then
 0 14 1 * * /usr/local/bin/bryan-crons/bryan-multi-tenant.sh monthly >> /tmp/bryan-cron.log 2>&1
 CRONTAB
 
-  # Pass env vars to cron
-  env | grep -E '^(BOT_TOKEN|TELEGRAM_BOT_TOKEN|BRYAN_|OPENCLAW_|ANTHROPIC_|OPENAI_|COMPANION_|PATH)=' >> /tmp/bryan-crontab
+  # Pass env vars to cron (BOT_TOKEN aliased from TELEGRAM_BOT_TOKEN if not set)
+  export BOT_TOKEN="${BOT_TOKEN:-$TELEGRAM_BOT_TOKEN}"
+  env | grep -E '^(BOT_TOKEN|TELEGRAM_BOT_TOKEN|BRYAN_|OPENCLAW_|ANTHROPIC_|OPENAI_|COMPANION_|TAVILY_|PATH)=' >> /tmp/bryan-crontab
   crontab /tmp/bryan-crontab
   cron
   echo "[diji-instance] Cron daemon started"
