@@ -1,4 +1,7 @@
 {
+  "workspace": {
+    "dir": "/root/.openclaw-companion/.openclaw/workspace"
+  },
   "agents": {
     "defaults": {
       "model": {
