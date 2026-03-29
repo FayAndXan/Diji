@@ -1262,9 +1262,11 @@ app.post('/api/auth/verify', (req, res) => {
     // Create new user
     const id = randomUUID();
     const token = randomUUID();
+    const linkToken = randomUUID().replace(/-/g, '').substring(0, 12);
     user = {
       id,
       token,
+      linkToken,
       email: email.toLowerCase(),
       companionName: 'Bryan',
       telegramUsername: '',
