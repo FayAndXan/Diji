@@ -1327,8 +1327,8 @@ app.post('/api/internal/users/:id/profile', (req: any, res: any) => {
   writeFileSync(usersPath, JSON.stringify(users, null, 2));
   
   // Also update Postgres if available
-  if (pool) {
-    pool.query(
+  if (pgPool) {
+    pgPool.query(
       'UPDATE users SET health_profile = $1, updated_at = NOW() WHERE id = $2',
       [JSON.stringify(user.healthProfile), userId]
     ).catch((err: any) => console.error('[Companion] Postgres profile update failed:', err.message));
