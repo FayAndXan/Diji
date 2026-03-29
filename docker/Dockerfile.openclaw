@@ -51,6 +51,9 @@ RUN chmod +x /usr/local/bin/instance-start.sh
 ENV OPENCLAW_CONFIG_PATH=/root/.openclaw-companion/openclaw.json
 ENV OPENCLAW_STATE_DIR=/root/.openclaw-companion
 
+# Symlink so OpenClaw finds workspace at default $HOME/.openclaw/workspace
+RUN ln -sf /root/.openclaw-companion/.openclaw /root/.openclaw
+
 EXPOSE 18809
 
 CMD ["/usr/local/bin/instance-start.sh"]
