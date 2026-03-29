@@ -84,6 +84,11 @@ services:
       - companion-data:/app/data
       # Per-instance user data
       - openclaw-userdata-${HOSTNAME:-default}:/root/.openclaw-companion/data/users
+      # Device pairing + identity (survives rebuilds)
+      - openclaw-devices:/root/.openclaw-companion/devices
+      - openclaw-identity:/root/.openclaw-companion/identity
+      # Session storage (survives rebuilds)
+      - openclaw-sessions:/root/.openclaw-companion/agents
       # WeChat session files (host-mounted, contains login token)
       - /root/.openclaw-companion/openclaw-weixin:/root/.openclaw-companion/openclaw-weixin
     deploy:
@@ -119,3 +124,6 @@ volumes:
   redis-data:
   companion-data:
   openclaw-userdata-default:
+  openclaw-devices:
+  openclaw-identity:
+  openclaw-sessions:

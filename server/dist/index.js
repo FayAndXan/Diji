@@ -656,6 +656,12 @@ function canFireTrigger(userId, type, cooldownMs = 3600000) {
 }
 // Track which trigger types fired today (persisted per-user for cron dedup)
 function markTriggerFired(userId, type) {
+    // Postgres
+    if (pgPool) {
+        pgPool.query(`INSERT INTO trigger_log (user_id, trigger_type, fired_date) VALUES ($1, $2, CURRENT_DATE)
+       ON CONFLICT (user_id, trigger_type, fired_date) DO NOTHING`, [userId, type]).catch((err) => console.error('[Trigger] PG write failed:', err.message));
+    }
+    // Also write flat file as fallback
     const path = (0, path_1.join)(DATA_DIR, `triggers-today-${userId}.json`);
     let today = {};
     if ((0, fs_1.existsSync)(path)) {
@@ -666,24 +672,23 @@ function markTriggerFired(userId, type) {
     }
     const dateKey = new Date().toISOString().split('T')[0];
     if (today._date !== dateKey)
-        today = { _date: dateKey }; // reset on new day
+        today = { _date: dateKey };
     today[type] = Date.now();
     (0, fs_1.writeFileSync)(path, JSON.stringify(today));
 }
 function didTriggerFireToday(userId, type) {
+    // Check flat file first (sync, fast)
     const path = (0, path_1.join)(DATA_DIR, `triggers-today-${userId}.json`);
-    if (!(0, fs_1.existsSync)(path))
-        return false;
-    try {
-        const today = JSON.parse((0, fs_1.readFileSync)(path, 'utf-8'));
-        const dateKey = new Date().toISOString().split('T')[0];
-        if (today._date !== dateKey)
-            return false;
-        return !!today[type];
+    if ((0, fs_1.existsSync)(path)) {
+        try {
+            const today = JSON.parse((0, fs_1.readFileSync)(path, 'utf-8'));
+            const dateKey = new Date().toISOString().split('T')[0];
+            if (today._date === dateKey && today[type])
+                return true;
+        }
+        catch { }
     }
-    catch {
-        return false;
-    }
+    return false;
 }
 // Internal API: check if a trigger fired today (crons call this to dedup)
 app.get('/api/internal/trigger-status/:username/:type', (req, res) => {

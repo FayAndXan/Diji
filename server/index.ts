@@ -807,26 +807,37 @@ function canFireTrigger(userId: string, type: string, cooldownMs = 3600000): boo
 
 // Track which trigger types fired today (persisted per-user for cron dedup)
 function markTriggerFired(userId: string, type: string) {
+  // Postgres
+  if (pgPool) {
+    pgPool.query(
+      `INSERT INTO trigger_log (user_id, trigger_type, fired_date) VALUES ($1, $2, CURRENT_DATE)
+       ON CONFLICT (user_id, trigger_type, fired_date) DO NOTHING`,
+      [userId, type]
+    ).catch((err: any) => console.error('[Trigger] PG write failed:', err.message));
+  }
+  // Also write flat file as fallback
   const path = join(DATA_DIR, `triggers-today-${userId}.json`);
   let today: Record<string, string | number> = {};
   if (existsSync(path)) {
     try { today = JSON.parse(readFileSync(path, 'utf-8')); } catch {}
   }
   const dateKey = new Date().toISOString().split('T')[0];
-  if (today._date !== dateKey) today = { _date: dateKey }; // reset on new day
+  if (today._date !== dateKey) today = { _date: dateKey };
   today[type] = Date.now();
   writeFileSync(path, JSON.stringify(today));
 }
 
 function didTriggerFireToday(userId: string, type: string): boolean {
+  // Check flat file first (sync, fast)
   const path = join(DATA_DIR, `triggers-today-${userId}.json`);
-  if (!existsSync(path)) return false;
-  try {
-    const today = JSON.parse(readFileSync(path, 'utf-8'));
-    const dateKey = new Date().toISOString().split('T')[0];
-    if (today._date !== dateKey) return false;
-    return !!today[type];
-  } catch { return false; }
+  if (existsSync(path)) {
+    try {
+      const today = JSON.parse(readFileSync(path, 'utf-8'));
+      const dateKey = new Date().toISOString().split('T')[0];
+      if (today._date === dateKey && today[type]) return true;
+    } catch {}
+  }
+  return false;
 }
 
 // Internal API: check if a trigger fired today (crons call this to dedup)
