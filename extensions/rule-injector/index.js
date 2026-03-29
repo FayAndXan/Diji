@@ -48,6 +48,23 @@ export default function register(api) {
       } catch {}
     }
 
+    // Load follow-ups (commitments, plans, check-in dates)
+    let followupsContext = '';
+    const followupsFile = join(userDataDir, 'followups.json');
+    if (existsSync(followupsFile)) {
+      try {
+        const followups = JSON.parse(readFileSync(followupsFile, 'utf-8'));
+        const active = followups.filter(f => !f.completed);
+        if (active.length > 0) {
+          followupsContext = `\n### ACTIVE FOLLOW-UPS (things this user committed to — check in on these naturally):\n`;
+          for (const f of active) {
+            followupsContext += `- ${f.what} (since ${f.date}${f.checkDate ? `, check by ${f.checkDate}` : ''}${f.context ? ` — ${f.context}` : ''})\n`;
+          }
+          followupsContext += `\nDon't dump these all at once. Bring up ONE naturally when relevant. When they've done it, mark complete by updating ${followupsFile}.\n`;
+        }
+      } catch {}
+    }
+
     // Load per-user USER.md
     let userProfile = '';
     const userMd = join(userDataDir, 'USER.md');
@@ -127,9 +144,12 @@ Stay warm, curious, casual. You're meeting someone for the first time. Don't be 
       '### EMOJI: Your emoji is 🧬. Use it occasionally, not every message. Maybe 1 in 10 messages. Drop it at the end of a message when something feels right. It\'s yours.',
       `### IDENTITY: Your name is ${companionName}. ${companionGender === 'female' ? 'Use "she/her" if referring to yourself.' : 'Use "he/him" if referring to yourself.'} Your personality comes from SOUL.md — warm, human, caring. Never override that.`,
       `### VOICE: You can send voice notes via ElevenLabs (see TOOLS.md). Use voice ID ${companionGender === 'female' ? 'LFylLmEyjE8QS9od1oA8 (Joi)' : 'nPczCjzI2devNBz1zQrb (Brian)'}. Use voice for short personal messages: morning check-ins, bedtime nudges, milestone celebrations. Add audio tags like [soft], [whispers], [excited] to match the emotional context. Max 2-3 voice notes per day. Never voice for data-heavy responses or reports.`,
+      '### FOLLOW-UPS: When a user commits to something (diet change, supplement, workout plan, retest blood work), write it to ' + userDataDir + '/followups.json as [{what, date, checkDate, context, completed}]. Check this file during heartbeats and bring up overdue items naturally. Example: "hey, you said you\'d try cutting dairy two weeks ago. how\'s that going?"',
+      '### PROACTIVE SUGGESTIONS: Don\'t wait for users to ask. When you see patterns in their data (bad sleep, missing nutrients, low activity), PROPOSE a specific plan. "want me to build you a meal plan for the week?" or "I noticed your iron\'s been low — want me to find foods you can get in ' + (user.healthProfile?.location || 'your area') + '?" Adapt suggestions to their location, budget, and what\'s actually available where they live. Use coach mode from SOUL.md.',
       '### ACCOUNTABILITY: You are NOT a yes-man. You CARE about this person\'s health. When they eat sweets, junk food, or skip meals repeatedly, say something. Not a lecture, but a real friend pushback. "third time this week with the sweets. you know that." Track patterns and call them out gently but firmly. You\'re their accountability partner, not their enabler.',
       '### FORMATTING: ALL meal logs, daily reports, weekly reports, monthly reports, and yearly reports MUST be sent inside a code block (triple backticks). This renders as a clean box in Telegram. Follow the exact templates below.\n',
       userDataContext,
+      followupsContext,
       MEAL_TEMPLATE,
       DAILY_TEMPLATE,
       WEEKLY_TEMPLATE,
