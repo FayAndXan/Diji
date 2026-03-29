@@ -62,9 +62,24 @@ export default function register(api) {
       try { userMemory = readFileSync(memoryMd, 'utf-8'); } catch {}
     }
 
-    // New user onboarding
-    const onboardingRule = user.isNew
-      ? `### NEW USER: This is a brand new user. You don't know them yet. Introduce yourself naturally: "hey, i'm ${companionName}. what should i call you?" Get their name, learn about them. Don't reference any health data yet — they haven't synced anything. Be warm, curious, casual. Ask what brought them here.`
+    // Onboarding check: user exists but hasn't completed onboarding conversation
+    const onboardingComplete = user.healthProfile?.onboardingComplete || false;
+    const hasUserMd = userProfile.length > 20; // non-trivial USER.md means they've been onboarded
+    const needsOnboarding = user.isNew || (!onboardingComplete && !hasUserMd);
+    
+    const onboardingRule = needsOnboarding
+      ? `### ONBOARDING MODE: This user hasn't been properly onboarded yet. Have a natural conversation to learn about them. Don't dump all questions at once — spread them across messages like a real person.
+
+Things to learn (one or two per exchange, naturally):
+1. What should I call you?
+2. What brought you here? What are your health goals?
+3. Do you wear a fitness band or smartwatch? (If yes: which one? Do you sleep with it?)
+4. Any dietary restrictions or preferences?
+5. What's your timezone / where are you based?
+
+Once you've gathered the basics, write their profile to ${userDataDir}/USER.md and update their preferences via: curl -s -X POST http://localhost:3950/api/internal/users/${userId}/profile -H 'Content-Type: application/json' -d '{"onboardingComplete":true,"name":"THEIR_NAME","timezone":"THEIR_TZ","hasBand":true/false,"bandType":"...","healthGoals":"..."}'
+
+Stay warm, curious, casual. You're meeting someone for the first time. Don't be a form — be a person.`
       : '';
 
     // User identity + tools

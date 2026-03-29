@@ -1204,6 +1204,42 @@ app.get('/api/internal/user-by-channel/:channel/:peerId', (req, res) => {
   res.status(404).json({ error: 'User not found' });
 });
 
+// Update user profile (from onboarding or settings)
+app.post('/api/internal/users/:id/profile', (req: any, res: any) => {
+  const userId = req.params.id;
+  const updates = req.body;
+  
+  const usersPath = join(DATA_DIR, 'users.json');
+  let users: Record<string, any> = {};
+  try { users = JSON.parse(readFileSync(usersPath, 'utf-8')); } catch {}
+  
+  const user = users[userId];
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  
+  // Update health profile fields
+  if (!user.healthProfile) user.healthProfile = {};
+  const profileFields = ['onboardingComplete', 'name', 'timezone', 'hasBand', 'bandType', 'sleepsWithBand', 'healthGoals', 'dietaryRestrictions', 'language'];
+  for (const field of profileFields) {
+    if (updates[field] !== undefined) {
+      user.healthProfile[field] = updates[field];
+    }
+  }
+  
+  users[userId] = user;
+  writeFileSync(usersPath, JSON.stringify(users, null, 2));
+  
+  // Also update Postgres if available
+  if (pool) {
+    pool.query(
+      'UPDATE users SET health_profile = $1, updated_at = NOW() WHERE id = $2',
+      [JSON.stringify(user.healthProfile), userId]
+    ).catch((err: any) => console.error('[Companion] Postgres profile update failed:', err.message));
+  }
+  
+  console.log(`[Companion] Profile updated for ${userId}: ${Object.keys(updates).join(', ')}`);
+  res.json({ ok: true, profile: user.healthProfile });
+});
+
 // Link a channel to an existing user + update OpenClaw identityLinks
 app.post('/api/internal/link-channel', (req, res) => {
   const { userId, channel, peerId } = req.body;
