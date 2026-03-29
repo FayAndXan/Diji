@@ -259,10 +259,10 @@ CREATE TABLE trigger_log (
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   trigger_type TEXT NOT NULL, -- morning, hr_spike, critical_sleep, etc.
   fired_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  fired_date DATE NOT NULL DEFAULT CURRENT_DATE,
   message TEXT,
-  UNIQUE (user_id, trigger_type, (fired_at::DATE))
+  UNIQUE (user_id, trigger_type, fired_date)
 );
-
 CREATE INDEX idx_trigger_log_user ON trigger_log (user_id, fired_at DESC);
 
 -- Device pairing persistence
