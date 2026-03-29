@@ -169,12 +169,11 @@ export default function register(api: any) {
     try {
       const { model, reason } = selectModel(event);
       debugLog(`Routing to ${model} (${reason})`);
-      // If model includes provider prefix, split it
-      if (model.includes('/')) {
-        const [provider, modelName] = model.split('/', 2);
-        return { providerOverride: provider, modelOverride: modelName };
-      }
-      return { modelOverride: model };
+      // Only override the model name, not the provider.
+      // All our models are Anthropic — providerOverride is rejected
+      // by default (modelOverrides.allowProvider = false).
+      const modelName = model.includes('/') ? model.split('/').pop() : model;
+      return { modelOverride: modelName };
     } catch (err) {
       debugLog(`Error: ${err}`);
       // Fall through to default
