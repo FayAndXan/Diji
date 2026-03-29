@@ -1251,6 +1251,16 @@ app.post('/api/internal/link-channel', (req, res) => {
       }
       
       writeFileSync(configPath, JSON.stringify(config, null, 2));
+      
+      // Also persist identityLinks to companion-data so they survive rebuilds
+      const linksPath = join(DATA_DIR, 'identity-links.json');
+      let persistedLinks: Record<string, string[]> = {};
+      try { persistedLinks = JSON.parse(readFileSync(linksPath, 'utf-8')); } catch {}
+      if (config.session.identityLinks) {
+        Object.assign(persistedLinks, config.session.identityLinks);
+        writeFileSync(linksPath, JSON.stringify(persistedLinks, null, 2));
+        console.log(`[Companion] Persisted identityLinks to ${linksPath}`);
+      }
     } catch (err) {
       console.error(`[Companion] Failed to update OpenClaw config: ${err}`);
     }

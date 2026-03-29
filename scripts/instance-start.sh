@@ -43,6 +43,22 @@ sed -i "s|\${WHATSAPP_ACCESS_TOKEN}|${WHATSAPP_ACCESS_TOKEN}|g" openclaw.json
 sed -i "s|\${WHATSAPP_APP_SECRET}|${WHATSAPP_APP_SECRET}|g" openclaw.json
 sed -i "s|\${WHATSAPP_VERIFY_TOKEN}|${WHATSAPP_VERIFY_TOKEN}|g" openclaw.json
 
+# Restore persisted identityLinks from companion-data volume
+LINKS_FILE="/app/data/identity-links.json"
+if [ -f "$LINKS_FILE" ]; then
+  echo "[diji-instance] Restoring identityLinks from $LINKS_FILE"
+  python3 -c "
+import json
+links = json.load(open('$LINKS_FILE'))
+config_path = '/root/.openclaw-companion/openclaw.json'
+config = json.load(open(config_path))
+if 'session' not in config: config['session'] = {}
+config['session']['identityLinks'] = links
+json.dump(config, open(config_path, 'w'), indent=2)
+print(f'[diji-instance] Restored {len(links)} identityLinks')
+" || echo "[diji-instance] Warning: failed to restore identityLinks"
+fi
+
 # Start health analysis API (sleep stages, workout zones, recovery score)
 if [ -f /root/.openclaw-companion/health/sleep-analysis/api.py ]; then
   cd /root/.openclaw-companion/health/sleep-analysis
