@@ -11,10 +11,12 @@
     "@anthropic-ai/sdk": "^0.79.0",
     "@noble/ed25519": "^3.0.1",
     "@noble/hashes": "^2.0.1",
+    "@types/pg": "^8.20.0",
     "@types/ws": "^8.18.1",
     "express": "^4.21.0",
     "node-telegram-bot-api": "^0.67.0",
     "openai": "^6.31.0",
+    "pg": "^8.20.0",
     "ws": "^8.20.0"
   },
   "devDependencies": {
