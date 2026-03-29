@@ -51,8 +51,8 @@ RUN chmod +x /usr/local/bin/instance-start.sh
 ENV OPENCLAW_CONFIG_PATH=/root/.openclaw-companion/openclaw.json
 ENV OPENCLAW_STATE_DIR=/root/.openclaw-companion
 
-# No symlink needed - OPENCLAW_STATE_DIR points to /root/.openclaw-companion
-# workspace is at /root/.openclaw-companion/workspace
+# Symlink workspace so OpenClaw finds it at $HOME/.openclaw/workspace
+RUN mkdir -p /root/.openclaw && ln -sf /root/.openclaw-companion/workspace /root/.openclaw/workspace
 
 EXPOSE 18809
 
