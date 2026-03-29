@@ -165,7 +165,11 @@ function selectModel(event: any): { model: string; reason: string } {
 export default function register(api: any) {
   debugLog("companion-model-router plugin registered");
   
-  api.on("before_model_resolve", (event: any, ctx: any) => {
+  // Use before_agent_start (legacy but supports both messages + modelOverride).
+  // before_model_resolve runs pre-session with NO messages — can't check user input.
+  // before_prompt_build has messages but can't return modelOverride.
+  // before_agent_start has BOTH.
+  api.on("before_agent_start", (event: any, ctx: any) => {
     try {
       const { model, reason } = selectModel(event);
       debugLog(`Routing to ${model} (${reason})`);
