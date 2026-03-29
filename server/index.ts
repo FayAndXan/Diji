@@ -974,15 +974,22 @@ app.post('/api/siri', auth, async (req, res) => {
 
 // ─── Internal API: Bryan reads user health data ──────────────────
 
-app.get('/api/internal/health/:username', (req, res) => {
-  const username = req.params.username.replace('@', '');
+app.get('/api/internal/health/:identifier', (req, res) => {
+  const identifier = req.params.identifier.replace('@', '');
   const users = getUsers();
-  // Get the most recent user entry for this username
-  const userEntries = Object.values(users)
-    .filter(u => u.telegramUsername === username)
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   
-  const user = userEntries[0];
+  // Look up by: user ID, telegram username, telegram chat ID, or channel peer ID
+  let user = null;
+  for (const [id, u] of Object.entries(users)) {
+    if (id === identifier ||
+        u.telegramUsername === identifier ||
+        String(u.telegramChatId) === identifier ||
+        (u.channelLinks || []).some((l: any) => l.peerId === identifier)) {
+      user = u;
+      break;
+    }
+  }
+  
   if (!user) return res.status(404).json({ error: 'User not found' });
   
   const creatureState = evaluateCreatureState(user);
@@ -999,14 +1006,21 @@ app.get('/api/internal/health/:username', (req, res) => {
 });
 
 // Internal: Bryan reads user health history
-app.get('/api/internal/health-history/:username', (req, res) => {
-  const username = req.params.username.replace('@', '');
+app.get('/api/internal/health-history/:identifier', (req, res) => {
+  const identifier = req.params.identifier.replace('@', '');
   const users = getUsers();
-  const userEntries = Object.values(users)
-    .filter(u => u.telegramUsername === username)
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   
-  const user = userEntries[0];
+  let user = null;
+  for (const [id, u] of Object.entries(users)) {
+    if (id === identifier ||
+        u.telegramUsername === identifier ||
+        String(u.telegramChatId) === identifier ||
+        (u.channelLinks || []).some((l: any) => l.peerId === identifier)) {
+      user = u;
+      break;
+    }
+  }
+  
   if (!user) return res.status(404).json({ error: 'User not found' });
   
   const historyPath = join(DATA_DIR, `health-history-${user.id}.json`);
