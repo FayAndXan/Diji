@@ -1306,13 +1306,41 @@ function base64url(buf: Uint8Array): string {
   return Buffer.from(buf).toString('base64url');
 }
 
+const DEVICE_KEY_PATH = join(DATA_DIR, 'device-identity.json');
+
 async function getDeviceIdentity() {
   if (deviceIdentity) return deviceIdentity;
+  
+  // Try loading persisted identity
+  if (existsSync(DEVICE_KEY_PATH)) {
+    try {
+      const saved = JSON.parse(readFileSync(DEVICE_KEY_PATH, 'utf-8'));
+      if (saved.deviceId && saved.publicKey && saved.privateKey) {
+        deviceIdentity = {
+          deviceId: saved.deviceId,
+          publicKey: saved.publicKey,
+          privateKey: Buffer.from(saved.privateKey, 'base64url')
+        };
+        console.log('[ChatProxy] Loaded device identity:', saved.deviceId.substring(0, 16) + '...');
+        return deviceIdentity;
+      }
+    } catch {}
+  }
+  
+  // Generate new identity
   const privateKey = (ed.utils as any).randomSecretKey();
   const publicKey = await ed.getPublicKeyAsync(privateKey);
   const deviceId = cryptoCreateHash('sha256').update(publicKey).digest('hex');
   deviceIdentity = { deviceId, publicKey: base64url(publicKey), privateKey };
-  console.log('[ChatProxy] Device identity:', deviceId.substring(0, 16) + '...');
+  
+  // Persist to disk
+  writeFileSync(DEVICE_KEY_PATH, JSON.stringify({
+    deviceId,
+    publicKey: base64url(publicKey),
+    privateKey: base64url(privateKey)
+  }, null, 2));
+  
+  console.log('[ChatProxy] Created device identity:', deviceId.substring(0, 16) + '...');
   return deviceIdentity;
 }
 
