@@ -21,7 +21,7 @@ function parseSessionKey(sessionKey: string | undefined): { channel: string | nu
   const parts = sessionKey.split(':');
   
   // Look for known channel names in the parts
-  const channels = ['telegram', 'whatsapp-cloud', 'openclaw-weixin'];
+  const channels = ['telegram', 'whatsapp-cloud', 'openclaw-weixin', 'app'];
   for (let i = 0; i < parts.length; i++) {
     if (channels.includes(parts[i])) {
       const channel = parts[i];

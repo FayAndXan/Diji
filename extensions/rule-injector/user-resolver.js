@@ -34,7 +34,7 @@ export function parseSessionKey(sessionKey) {
   const parts = sessionKey.split(':');
   
   // Format: agent:main:telegram:direct:PEER_ID
-  const channels = ['telegram', 'whatsapp-cloud', 'openclaw-weixin'];
+  const channels = ['telegram', 'whatsapp-cloud', 'openclaw-weixin', 'app'];
   for (let i = 0; i < parts.length; i++) {
     if (channels.includes(parts[i])) {
       const channel = parts[i];
@@ -96,6 +96,11 @@ export function findUserByPeer(channel, peerId) {
     
     // Legacy: check telegramUsername
     if (channel === 'telegram' && user.telegramUsername && user.telegramChatId === peerId) {
+      return { ...user, id };
+    }
+    
+    // App sessions: peerId IS the userId
+    if (channel === 'app' && id === peerId) {
       return { ...user, id };
     }
   }

@@ -37,7 +37,7 @@ function findUserByPeer(channel, peerId) {
 function parseSessionKey(sessionKey) {
   if (!sessionKey || sessionKey === 'main') return { channel: null, peerId: null };
   const parts = sessionKey.split(':');
-  const channels = ['telegram', 'whatsapp-cloud', 'openclaw-weixin'];
+  const channels = ['telegram', 'whatsapp-cloud', 'openclaw-weixin', 'app'];
   for (let i = 0; i < parts.length; i++) {
     if (channels.includes(parts[i])) {
       const peerId = parts[parts.length - 1];
