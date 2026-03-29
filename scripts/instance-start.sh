@@ -52,6 +52,7 @@ if [ -f /root/.openclaw-companion/health/sleep-analysis/api.py ]; then
 fi
 
 # Start cron daemon (for scheduled reports, check-ins)
+rm -f /var/run/crond.pid
 if command -v cron >/dev/null 2>&1; then
   # Install crontab for multi-tenant cron jobs
   # All times in UTC — scripts convert to per-user timezone
