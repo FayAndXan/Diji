@@ -33,6 +33,10 @@ function findUserByPeer(channel, peerId) {
     if (channel === 'app' && id === peerId) {
       return { ...user, id };
     }
+    // identityLinks rewrites peerId to canonical user ID
+    if (id === peerId) {
+      return { ...user, id };
+    }
   }
   return null;
 }

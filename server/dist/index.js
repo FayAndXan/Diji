@@ -971,6 +971,10 @@ app.get('/api/internal/user-by-channel/:channel/:peerId', (req, res) => {
         if (channel === 'telegram' && user.telegramChatId === peerId) {
             return res.json({ ...user, id });
         }
+        // identityLinks rewrites peerId to canonical user ID
+        if (id === peerId) {
+            return res.json({ ...user, id });
+        }
     }
     res.status(404).json({ error: 'User not found' });
 });
