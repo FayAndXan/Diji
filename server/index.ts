@@ -1725,6 +1725,23 @@ app.get('/health', (_, res) => res.json({ status: 'ok', uptime: process.uptime()
 
 // ─── Start ───────────────────────────────────────────────────────
 
+// ─── Job Queue ───────────────────────────────────────────────────
+
+import { startWorkers, runScheduler, getQueueStats, queueHealthTrigger } from './jobs';
+
+const USE_JOB_QUEUE = !!process.env.REDIS_URL;
+
+// Job queue stats endpoint
+app.get('/api/internal/queue-stats', async (_, res) => {
+  if (!USE_JOB_QUEUE) return res.json({ enabled: false });
+  try {
+    const stats = await getQueueStats();
+    res.json({ enabled: true, ...stats });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── Startup ─────────────────────────────────────────────────────
 
 async function start() {
@@ -1736,11 +1753,85 @@ async function start() {
     console.log('[Companion] No DATABASE_URL — using JSON files only');
   }
 
+  // Start job queue workers
+  if (USE_JOB_QUEUE) {
+    startWorkers({
+      processHealthTrigger: async (job) => {
+        // Find user and fire Bryan trigger
+        const users = getUsers();
+        const user = Object.values(users).find(u => u.id === job.userId);
+        if (!user) return;
+        await fireBryanTrigger(user, { type: job.triggerType, message: job.message, priority: job.priority });
+      },
+      processScheduledMessage: async (job) => {
+        // Find user and send scheduled message
+        const users = getUsers();
+        const user = Object.values(users).find(u => u.id === job.userId);
+        if (!user) return;
+        
+        // Build prompt from template
+        const { execSync } = require('child_process');
+        try {
+          const result = execSync(
+            `OPENCLAW_CONFIG_PATH=${COMPANION_CONFIG} OPENCLAW_STATE_DIR=${COMPANION_STATE} openclaw agent --channel ${job.channel} --to ${job.targetId} -m "${job.promptTemplate.replace(/"/g, '\\"')}"`,
+            { timeout: 60000, encoding: 'utf-8' }
+          ).trim();
+          
+          if (result && !/^(HEARTBEAT_OK|SKIP|NO_REPLY)$/i.test(result)) {
+            // Send via appropriate channel
+            if (job.channel === 'telegram') {
+              await fetch(`https://api.telegram.org/bot${BRYAN_BOT_TOKEN}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chat_id: job.targetId, text: result, parse_mode: 'Markdown' })
+              });
+            }
+            console.log(`[Jobs] Scheduled ${job.jobType} sent to ${job.userId}`);
+          }
+        } catch (err: any) {
+          console.error(`[Jobs] Scheduled ${job.jobType} failed for ${job.userId}:`, err.message);
+        }
+      },
+      processLlmCall: async (job) => {
+        // Direct LLM call via OpenClaw
+        const { execSync } = require('child_process');
+        try {
+          const sessionArg = job.sessionKey ? `--session ${job.sessionKey}` : '';
+          const result = execSync(
+            `OPENCLAW_CONFIG_PATH=${COMPANION_CONFIG} OPENCLAW_STATE_DIR=${COMPANION_STATE} openclaw agent ${sessionArg} --channel ${job.channel} --to ${job.targetId} -m "${job.prompt.replace(/"/g, '\\"')}"`,
+            { timeout: 60000, encoding: 'utf-8' }
+          ).trim();
+          
+          if (result && !/^(HEARTBEAT_OK|SKIP|NO_REPLY)$/i.test(result)) {
+            if (job.channel === 'telegram') {
+              await fetch(`https://api.telegram.org/bot${BRYAN_BOT_TOKEN}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chat_id: job.targetId, text: result, parse_mode: 'Markdown' })
+              });
+            }
+          }
+        } catch (err: any) {
+          console.error(`[Jobs] LLM call failed:`, err.message);
+        }
+      }
+    });
+
+    // Run scheduler every 60 seconds
+    if (pgPool) {
+      setInterval(() => runScheduler(pgPool), 60000);
+      // Initial run
+      setTimeout(() => runScheduler(pgPool), 5000);
+      console.log('[Companion] Job scheduler started (60s interval)');
+    }
+  }
+
   app.listen(PORT, () => {
     console.log(`[Companion] Server running on port ${PORT}`);
     console.log(`[Companion] OpenClaw gateway: ${OPENCLAW_GATEWAY}`);
     console.log(`[Companion] Gateway WS: ${GATEWAY_WS_URL}`);
     console.log(`[Companion] Storage: ${USE_POSTGRES ? 'Postgres + JSON (write-through)' : 'JSON only'}`);
+    console.log(`[Companion] Job queue: ${USE_JOB_QUEUE ? 'BullMQ on Redis' : 'disabled'}`);
   });
 }
 
