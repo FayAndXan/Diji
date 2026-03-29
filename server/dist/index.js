@@ -1082,7 +1082,9 @@ let deviceIdentity = null;
 function base64url(buf) {
     return Buffer.from(buf).toString('base64url');
 }
-const DEVICE_KEY_PATH = (0, path_1.join)(DATA_DIR, 'device-identity.json');
+// DATA_DIR may resolve to dist/data locally; use explicit /app/data in Docker or DATA_DIR env
+const PERSISTENT_DIR = process.env.DATA_DIR || DATA_DIR;
+const DEVICE_KEY_PATH = (0, path_1.join)(PERSISTENT_DIR, 'device-identity.json');
 async function getDeviceIdentity() {
     if (deviceIdentity)
         return deviceIdentity;

@@ -80,6 +80,7 @@ services:
     environment:
       - REDIS_URL=redis://redis:6379
       - DATABASE_URL=${DATABASE_URL}
+      - DATA_DIR=/app/data
       - SUPERMEMORY_API_KEY=${SUPERMEMORY_API_KEY}
       - RESEND_API_KEY=${RESEND_API_KEY}
       - OPENCLAW_GATEWAY_TOKEN=${OPENCLAW_GATEWAY_TOKEN}
