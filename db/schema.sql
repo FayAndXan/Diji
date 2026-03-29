@@ -14,7 +14,7 @@ CREATE TABLE users (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   email TEXT UNIQUE NOT NULL,
   token UUID UNIQUE NOT NULL DEFAULT uuid_generate_v4(),
-  link_token UUID UNIQUE DEFAULT uuid_generate_v4(),
+  link_token TEXT UNIQUE DEFAULT encode(gen_random_bytes(6), 'hex'),
   companion_name TEXT NOT NULL DEFAULT 'Bryan',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
