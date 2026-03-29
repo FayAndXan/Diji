@@ -45,6 +45,9 @@
       "entries": {
         "user-bootstrap": {
           "enabled": true
+        },
+        "telegram-linker": {
+          "enabled": true
         }
       },
       "load": {
