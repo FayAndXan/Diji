@@ -20,6 +20,7 @@
       "compaction": {
         "mode": "safeguard"
       },
+      "workspace": "/root/.openclaw-companion/workspace",
       "heartbeat": {
         "every": "3h",
         "prompt": "Heartbeat. Read HEARTBEAT.md and follow it."
