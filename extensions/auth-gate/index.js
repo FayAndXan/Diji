@@ -30,6 +30,9 @@ function findUserByPeer(channel, peerId) {
     if (channel === 'telegram' && String(user.telegramChatId) === String(peerId)) {
       return { ...user, id };
     }
+    if (channel === 'app' && id === peerId) {
+      return { ...user, id };
+    }
   }
   return null;
 }
