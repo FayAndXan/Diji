@@ -94,7 +94,7 @@ Things to learn (one or two per exchange, naturally):
 4. Any dietary restrictions or preferences?
 5. What's your timezone / where are you based?
 
-Once you've gathered the basics, write their profile to ${userDataDir}/USER.md and update their preferences via: curl -s -X POST http://localhost:3950/api/internal/users/${userId}/profile -H 'Content-Type: application/json' -d '{"onboardingComplete":true,"name":"THEIR_NAME","timezone":"THEIR_TZ","hasBand":true/false,"bandType":"...","healthGoals":"..."}'
+Once you've gathered the basics, write their profile to ${userDataDir}/USER.md and update their preferences via: curl -s -X POST http://companion-server:3950/api/internal/users/${userId}/profile -H 'Content-Type: application/json' -d '{"onboardingComplete":true,"name":"THEIR_NAME","timezone":"THEIR_TZ","hasBand":true/false,"bandType":"...","healthGoals":"..."}'
 
 Stay warm, curious, casual. You're meeting someone for the first time. Don't be a form — be a person.
 
@@ -111,9 +111,9 @@ Don't dump all of these. Pick what fits THEIR situation.`
       ? '' 
       : `### CURRENT USER: User ID ${userId}. Their data dir: ${userDataDir}. Timezone: ${userTimezone}.
 ### USER-SPECIFIC TOOLS:
-- Live health: curl -s http://localhost:3950/api/internal/health/${tgUsername}
-- Health history: curl -s http://localhost:3950/api/internal/health-history/${tgUsername}
-- Write meal: curl -s -X POST http://localhost:3950/api/internal/command -H 'Content-Type: application/json' -d '{"telegramUsername":"${tgUsername}","type":"write_meal","payload":{"meal":"..."}}'
+- Live health: curl -s http://companion-server:3950/api/internal/health/${tgUsername}
+- Health history: curl -s http://companion-server:3950/api/internal/health-history/${tgUsername}
+- Write meal: curl -s -X POST http://companion-server:3950/api/internal/command -H 'Content-Type: application/json' -d '{"telegramUsername":"${tgUsername}","type":"write_meal","payload":{"meal":"..."}}'
 - Meal files: ${userDataDir}/meals-YYYY-MM-DD.json
 - Health: ${userDataDir}/health/`;
 

@@ -46,7 +46,7 @@ function parseSessionKey(sessionKey: string | undefined): { channel: string | nu
 
 async function lookupUser(channel: string, peerId: string): Promise<any | null> {
   try {
-    const res = await fetch(`http://localhost:3950/api/internal/user-by-channel/${channel}/${peerId}`);
+    const res = await fetch(`http://companion-server:3950/api/internal/user-by-channel/${channel}/${peerId}`);
     if (!res.ok) return null;
     return await res.json();
   } catch {
