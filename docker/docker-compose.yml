@@ -72,7 +72,7 @@ services:
       replicas: 1
       resources:
         limits:
-          memory: 2G
+          memory: 3G
     restart: always
 
   companion-server:
