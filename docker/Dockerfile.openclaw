@@ -43,8 +43,9 @@ RUN ln -sf /usr/local/bin/bryan-crons/bryan-env.sh /usr/local/bin/bryan-env.sh
 # Copy remaining scripts
 COPY scripts/ /usr/local/bin/diji-scripts/
 
-# Copy health pipeline
+# Copy health pipeline + sleep analysis API
 COPY health/ /root/.openclaw-companion/health/
+RUN pip3 install --break-system-packages numpy 2>/dev/null || true
 
 # Copy companion server
 COPY server/ /root/.openclaw-companion/server/

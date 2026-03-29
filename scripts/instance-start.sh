@@ -43,6 +43,14 @@ sed -i "s|\${WHATSAPP_ACCESS_TOKEN}|${WHATSAPP_ACCESS_TOKEN}|g" openclaw.json
 sed -i "s|\${WHATSAPP_APP_SECRET}|${WHATSAPP_APP_SECRET}|g" openclaw.json
 sed -i "s|\${WHATSAPP_VERIFY_TOKEN}|${WHATSAPP_VERIFY_TOKEN}|g" openclaw.json
 
+# Start health analysis API (sleep stages, workout zones, recovery score)
+if [ -f /root/.openclaw-companion/health/sleep-analysis/api.py ]; then
+  cd /root/.openclaw-companion/health/sleep-analysis
+  python3 api.py &
+  echo "[diji-instance] Health analysis API started on port 3951"
+  cd /
+fi
+
 # Start cron daemon (for scheduled reports, check-ins)
 if command -v cron >/dev/null 2>&1; then
   # Install crontab for multi-tenant cron jobs
