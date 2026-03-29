@@ -62,7 +62,9 @@ services:
     depends_on:
       - redis
     volumes:
-      # Per-instance user data — each replica gets its own volume
+      # Shared user data with companion-server
+      - companion-data:/app/data
+      # Per-instance user data
       - openclaw-userdata-${HOSTNAME:-default}:/root/.openclaw-companion/data/users
       # WeChat session files (host-mounted, contains login token)
       - /root/.openclaw-companion/openclaw-weixin:/root/.openclaw-companion/openclaw-weixin
