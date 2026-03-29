@@ -137,7 +137,6 @@
     "allow": [
       "auth-gate",
       "companion-food",
-      "companion-model-router",
       "companion-nutrient-calculator",
       "companion-mood-detector",
       "companion-schedule-learner",
@@ -160,7 +159,6 @@
       "paths": [
         "/root/.openclaw-companion/extensions/auth-gate",
         "/root/.openclaw-companion/extensions/companion-food",
-        "/root/.openclaw-companion/extensions/companion-model-router",
         "/root/.openclaw-companion/extensions/companion-nutrient-calculator",
         "/root/.openclaw-companion/extensions/companion-mood-detector",
         "/root/.openclaw-companion/extensions/companion-schedule-learner",
@@ -178,9 +176,6 @@
         "enabled": true
       },
       "companion-food": {
-        "enabled": true
-      },
-      "companion-model-router": {
         "enabled": true
       },
       "companion-nutrient-calculator": {
