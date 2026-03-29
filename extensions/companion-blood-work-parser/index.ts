@@ -164,7 +164,7 @@ MANDATORY PROCESS:
 3. Organize markers by category (metabolic, lipids, inflammation, liver, kidney, thyroid, hormones, iron, vitamins, CBC).
 4. For each marker, flag as 🔴 out of range, 🟡 suboptimal, or 🟢 optimal.
 5. Search Spectrawl for current optimal ranges (not just lab reference ranges):
-   curl -s http://localhost:3900/search -X POST -H 'Content-Type: application/json' -d '{"query":"optimal [marker] range longevity"}'
+   curl -s http://172.17.0.1:3900/search -X POST -H 'Content-Type: application/json' -d '{"query":"optimal [marker] range longevity"}'
 6. Compare to previous results if available.
 7. Connect flagged markers to diet, supplements, and lifestyle.
 8. Suggest retesting timeline.

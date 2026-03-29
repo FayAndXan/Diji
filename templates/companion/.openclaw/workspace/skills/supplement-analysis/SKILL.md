@@ -11,7 +11,7 @@ When a user mentions a supplement, vitamin, mineral, sends a supplement photo, a
 
 - If user sends a photo: identify the product name and brand from the label
 - ALWAYS search Spectrawl for the exact product:
-  `curl -s http://localhost:3900/search -X POST -H 'Content-Type: application/json' -d '{"query":"[product name] supplement ingredients nutritional facts"}'`
+  `curl -s http://172.17.0.1:3900/search -X POST -H 'Content-Type: application/json' -d '{"query":"[product name] supplement ingredients nutritional facts"}'`
 - Pull the complete nutritional facts: every active ingredient with exact dose and % DV
 - List every inactive/other ingredient (fillers, binders, coatings)
 - If you can't find the exact product online, ask the user for a clearer photo of the back label
@@ -33,7 +33,7 @@ Check EVERY ingredient against their blood markers:
 - High WBC → flag anything affecting immune response
 - Low vitamin D → confirm D3 dose is adequate
 - Search Spectrawl for any ingredient-blood marker interactions you're unsure about:
-  `curl -s http://localhost:3900/search -X POST -H 'Content-Type: application/json' -d '{"query":"[ingredient] effect on [blood marker]"}'`
+  `curl -s http://172.17.0.1:3900/search -X POST -H 'Content-Type: application/json' -d '{"query":"[ingredient] effect on [blood marker]"}'`
 
 ## Step 4: Check supplement-to-supplement interactions
 
@@ -54,7 +54,7 @@ Key interactions to check:
 Compare the user's total daily intake (supplements + food logged in data/meals-*.json) against Blueprint recommended ranges.
 
 Search Spectrawl for current Blueprint protocol targets:
-`curl -s http://localhost:3900/search -X POST -H 'Content-Type: application/json' -d '{"query":"Bryan Johnson Blueprint supplement protocol current doses"}'`
+`curl -s http://172.17.0.1:3900/search -X POST -H 'Content-Type: application/json' -d '{"query":"Bryan Johnson Blueprint supplement protocol current doses"}'`
 
 - Flag if OVER recommended daily intake for any nutrient
 - Flag if UNDER despite supplementing (wrong dose, poor absorption form)

@@ -184,7 +184,7 @@ When suggesting recipes, search for real recipes from trusted longevity/health c
 
 **How to search:**
 ```bash
-curl -s http://localhost:3900/search -X POST -H 'Content-Type: application/json' -d '{"query":"site:youtube.com Pick Up Limes high potassium recipe"}'
+curl -s http://172.17.0.1:3900/search -X POST -H 'Content-Type: application/json' -d '{"query":"site:youtube.com Pick Up Limes high potassium recipe"}'
 ```
 
 **When to search:**

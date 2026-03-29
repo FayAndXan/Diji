@@ -20,26 +20,26 @@
 ### Write Meal to Apple Health
 After logging a meal, send the nutrients back to Apple Health so the user sees it in their Health app:
 ```bash
-curl -s -X POST http://localhost:3950/api/internal/command -H 'Content-Type: application/json' -d '{"telegramUsername":"USERNAME","type":"write_meal","payload":{"meal":"{\"calories\":480,\"protein\":58,\"fat\":20,\"carbs\":14,\"fiber\":3,\"sodium\":800,\"iron\":4.2,\"calcium\":30,\"vitaminC\":8,\"vitaminB12\":3.5}"}}'
+curl -s -X POST http://companion-server:3950/api/internal/command -H 'Content-Type: application/json' -d '{"telegramUsername":"USERNAME","type":"write_meal","payload":{"meal":"{\"calories\":480,\"protein\":58,\"fat\":20,\"carbs\":14,\"fiber\":3,\"sodium\":800,\"iron\":4.2,\"calcium\":30,\"vitaminC\":8,\"vitaminB12\":3.5}"}}'
 ```
 Include ALL nutrients you estimated. The app writes them to Apple Health. Do this EVERY time you log a meal.
 
 ### Write Weight to Apple Health
 ```bash
-curl -s -X POST http://localhost:3950/api/internal/command -H 'Content-Type: application/json' -d '{"telegramUsername":"USERNAME","type":"write_weight","payload":{"kg":"73.5"}}'
+curl -s -X POST http://companion-server:3950/api/internal/command -H 'Content-Type: application/json' -d '{"telegramUsername":"USERNAME","type":"write_weight","payload":{"kg":"73.5"}}'
 ```
 
 ### Write Symptom to Apple Health
 When user mentions any symptom (headache, nausea, fatigue, fever, etc.), log it:
 ```bash
-curl -s -X POST http://localhost:3950/api/internal/command -H 'Content-Type: application/json' -d '{"telegramUsername":"USERNAME","type":"write_symptom","payload":{"symptom":"headache","severity":"2"}}'
+curl -s -X POST http://companion-server:3950/api/internal/command -H 'Content-Type: application/json' -d '{"telegramUsername":"USERNAME","type":"write_symptom","payload":{"symptom":"headache","severity":"2"}}'
 ```
 Severity: 1=mild, 2=moderate, 3=severe.
 Supported symptoms: headache, nausea, fatigue, fever, coughing, sore throat, runny nose, congestion, dizziness, bloating, constipation, diarrhea, heartburn, vomiting, chills, body ache, chest pain, shortness of breath, lower back pain, mood changes, loss of smell, loss of taste, acne, dry skin, hair loss, night sweats, sleep changes, appetite changes, cramps, wheezing.
 
 ### Write Mindful Session to Apple Health
 ```bash
-curl -s -X POST http://localhost:3950/api/internal/command -H 'Content-Type: application/json' -d '{"telegramUsername":"USERNAME","type":"write_mindful","payload":{"minutes":"15"}}'
+curl -s -X POST http://companion-server:3950/api/internal/command -H 'Content-Type: application/json' -d '{"telegramUsername":"USERNAME","type":"write_mindful","payload":{"minutes":"15"}}'
 ```
 
 ## Memory (Supermemory)

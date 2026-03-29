@@ -10,7 +10,7 @@ Sleep is priority #1 for longevity. Nothing else works without it. When a user m
 ## Step 1: Gather sleep data
 
 Pull phone health data:
-`curl -s http://localhost:3950/api/internal/health/USERNAME`
+`curl -s http://companion-server:3950/api/internal/health/USERNAME`
 
 Run sleep stage analysis if HR data available:
 ```bash
@@ -55,7 +55,7 @@ Cross-reference sleep data with other data files:
 ## Step 3: Specific interventions (evidence-based)
 
 Search Spectrawl for current evidence before recommending specific protocols:
-`curl -s http://localhost:3900/search -X POST -H 'Content-Type: application/json' -d '{"query":"evidence-based sleep improvement [specific issue]"}'`
+`curl -s http://172.17.0.1:3900/search -X POST -H 'Content-Type: application/json' -d '{"query":"evidence-based sleep improvement [specific issue]"}'`
 
 Core interventions to recommend based on detected issues:
 

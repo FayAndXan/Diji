@@ -16,7 +16,7 @@ Before building the plan, verify you have:
 - Sleep data (even subjective): `{baseDir}/../../data/sleep-*.json`
 - Blood work (if available): `{baseDir}/../../data/bloodwork-*.json`
 - Current supplement stack: `{baseDir}/../../data/supplements-stack.json`
-- Phone health data: `curl -s http://localhost:3950/api/internal/health/USERNAME (replace USERNAME with the user's identifier from your injected context)`
+- Phone health data: `curl -s http://companion-server:3950/api/internal/health/USERNAME (replace USERNAME with the user's identifier from your injected context)`
 
 If any critical data is missing, ask for it before building the plan.
 
@@ -33,7 +33,7 @@ Based on their actual sleep data:
   - Poor quality? → Temperature, light, supplement recommendations
 - Supplements for sleep if needed (magnesium glycinate 200-400mg, etc.)
 - Search Spectrawl for any sleep protocol specifics:
-  `curl -s http://localhost:3900/search -X POST -H 'Content-Type: application/json' -d '{"query":"Bryan Johnson Blueprint sleep protocol"}'`
+  `curl -s http://172.17.0.1:3900/search -X POST -H 'Content-Type: application/json' -d '{"query":"Bryan Johnson Blueprint sleep protocol"}'`
 
 ### 2. Nutrition Targets
 
@@ -63,7 +63,7 @@ Based on their availability and recovery data:
 - **Deload schedule:** Every 4-6 weeks
 
 Search Spectrawl for current Blueprint exercise protocol:
-`curl -s http://localhost:3900/search -X POST -H 'Content-Type: application/json' -d '{"query":"Bryan Johnson Blueprint exercise routine current"}'`
+`curl -s http://172.17.0.1:3900/search -X POST -H 'Content-Type: application/json' -d '{"query":"Bryan Johnson Blueprint exercise routine current"}'`
 
 ### 4. Supplement Stack
 
@@ -76,7 +76,7 @@ Review their current stack from data/supplements-stack.json:
 - Interactions to watch for
 
 Search Spectrawl for current Blueprint supplement stack:
-`curl -s http://localhost:3900/search -X POST -H 'Content-Type: application/json' -d '{"query":"Bryan Johnson Blueprint supplement stack 2026"}'`
+`curl -s http://172.17.0.1:3900/search -X POST -H 'Content-Type: application/json' -d '{"query":"Bryan Johnson Blueprint supplement stack 2026"}'`
 
 ### 5. Biomarkers to Track
 

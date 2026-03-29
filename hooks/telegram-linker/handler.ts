@@ -2,7 +2,7 @@ import { readFileSync } from 'fs';
 import { appendFileSync } from 'fs';
 
 const LOG_FILE = '/tmp/telegram-linker.log';
-const COMPANION_URL = process.env.COMPANION_SERVER_URL || 'http://localhost:3950';
+const COMPANION_URL = process.env.COMPANION_SERVER_URL || 'http://companion-server:3950';
 
 function log(msg: string) {
   const ts = new Date().toISOString();

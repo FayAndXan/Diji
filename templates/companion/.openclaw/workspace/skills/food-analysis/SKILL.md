@@ -85,7 +85,7 @@ Also update food memory in `{baseDir}/../../data/food-memory.json`:
 After writing to the data file, push nutrients to Apple Health via the companion server so the user sees it in their Health app:
 
 ```bash
-curl -s -X POST http://localhost:3950/api/internal/command -H 'Content-Type: application/json' -d '{
+curl -s -X POST http://companion-server:3950/api/internal/command -H 'Content-Type: application/json' -d '{
   "telegramUsername":"USERNAME",
   "type":"write_meal",
   "payload":{

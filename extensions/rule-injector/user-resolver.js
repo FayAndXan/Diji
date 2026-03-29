@@ -159,7 +159,7 @@ export function linkChannelToUser(userId, channel, peerId) {
 async function findUserByAppRegistration(channel, peerId) {
   try {
     // Check if the companion server knows about this peer from app onboarding
-    const res = await fetch(`http://localhost:3950/api/internal/user-by-channel/${channel}/${peerId}`);
+    const res = await fetch(`http://companion-server:3950/api/internal/user-by-channel/${channel}/${peerId}`);
     if (res.ok) {
       const user = await res.json();
       return user;

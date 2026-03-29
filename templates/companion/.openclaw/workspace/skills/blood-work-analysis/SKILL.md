@@ -27,7 +27,7 @@ Organize into categories:
 ## Step 2: Flag out-of-range values
 
 For each marker, search Spectrawl for current optimal ranges (not just lab reference ranges — optimal and lab ranges differ):
-`curl -s http://localhost:3900/search -X POST -H 'Content-Type: application/json' -d '{"query":"optimal [marker name] range longevity"}'`
+`curl -s http://172.17.0.1:3900/search -X POST -H 'Content-Type: application/json' -d '{"query":"optimal [marker name] range longevity"}'`
 
 Flag three categories:
 - 🔴 **Out of range** — outside lab reference range
@@ -67,7 +67,7 @@ For each flagged marker, provide:
 5. When to retest
 
 Search Spectrawl for evidence-based interventions:
-`curl -s http://localhost:3900/search -X POST -H 'Content-Type: application/json' -d '{"query":"how to improve [marker] naturally evidence-based"}'`
+`curl -s http://172.17.0.1:3900/search -X POST -H 'Content-Type: application/json' -d '{"query":"how to improve [marker] naturally evidence-based"}'`
 
 ## Step 6: Suggest retesting timeline
 

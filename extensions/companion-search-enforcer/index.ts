@@ -58,7 +58,7 @@ export default function searchEnforcer(api: any) {
       const usedSearch = recentMessages.some((m: any) => {
         if (m.role !== 'assistant') return false;
         const c = typeof m.content === 'string' ? m.content : JSON.stringify(m.content);
-        return c.includes('localhost:3900') || 
+        return c.includes('localhost:3900') || c.includes('172.17.0.1:3900') || 
                c.includes('web_search') || 
                c.includes('web_fetch') || 
                c.includes('browse.js') ||

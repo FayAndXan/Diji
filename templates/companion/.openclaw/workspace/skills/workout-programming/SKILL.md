@@ -20,7 +20,7 @@ Check `{baseDir}/../../data/user-profile.json` for existing data. If missing, as
 ## Step 2: Check recovery status
 
 Pull phone health data:
-`curl -s http://localhost:3950/api/internal/health/USERNAME`
+`curl -s http://companion-server:3950/api/internal/health/USERNAME`
 
 Analyze workout HR zones (if HR data from a workout is available):
 ```bash
@@ -96,7 +96,7 @@ Always include these per Blueprint/Attia recommendations:
 **Flexibility/Mobility:** Hip 90/90, thoracic spine rotations, ankle mobility. 5-10 min daily.
 
 Search Spectrawl for current evidence if user asks about specific protocols:
-`curl -s http://localhost:3900/search -X POST -H 'Content-Type: application/json' -d '{"query":"..."}'`
+`curl -s http://172.17.0.1:3900/search -X POST -H 'Content-Type: application/json' -d '{"query":"..."}'`
 
 ## Step 5: Program the session
 
