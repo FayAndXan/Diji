@@ -48,15 +48,109 @@ const OPENCLAW_GATEWAY = process.env.OPENCLAW_GATEWAY || 'http://localhost:18809
 // Ensure data directory
 if (!(0, fs_1.existsSync)(DATA_DIR))
     (0, fs_1.mkdirSync)(DATA_DIR, { recursive: true });
-// ─── Simple file-based user store ────────────────────────────────
+// ─── User store (Postgres-backed with in-memory cache) ───────────
+const pg_1 = require("pg");
+const USE_POSTGRES = !!process.env.DATABASE_URL;
+const pgPool = USE_POSTGRES ? new pg_1.Pool({ connectionString: process.env.DATABASE_URL, max: 20 }) : null;
+// In-memory cache — loaded from Postgres on startup, synced on writes
+let usersCache = {};
+let cacheLoaded = false;
+async function loadUsersFromPostgres() {
+    if (!pgPool)
+        return;
+    try {
+        const { rows: users } = await pgPool.query('SELECT * FROM users');
+        const cache = {};
+        for (const u of users) {
+            const { rows: links } = await pgPool.query('SELECT * FROM channel_links WHERE user_id = $1', [u.id]);
+            const { rows: profiles } = await pgPool.query('SELECT * FROM health_profiles WHERE user_id = $1', [u.id]);
+            const hp = profiles[0];
+            cache[u.id] = {
+                id: u.id,
+                token: u.token,
+                email: u.email,
+                companionName: u.companion_name,
+                telegramUsername: links.find((l) => l.channel === 'telegram')?.peer_id || '',
+                telegramChatId: links.find((l) => l.channel === 'telegram')?.peer_id,
+                deviceId: '',
+                createdAt: u.created_at?.toISOString?.() || u.created_at,
+                creatureState: 'calm',
+                channelLinks: links.map((l) => ({ channel: l.channel, peerId: l.peer_id, linkedAt: l.linked_at?.toISOString?.() || l.linked_at })),
+                linkToken: u.link_token,
+                healthProfile: hp ? {
+                    hasBand: hp.has_band,
+                    sleepsWithBand: hp.sleeps_with_band,
+                    timezone: hp.timezone,
+                    language: hp.language,
+                    companionGender: hp.companion_gender,
+                    companionName: hp.companion_name,
+                    dateOfBirth: hp.dob,
+                    biologicalSex: hp.sex,
+                    heightCm: hp.height_cm ? Number(hp.height_cm) : undefined,
+                    weightKg: hp.weight_kg ? Number(hp.weight_kg) : undefined,
+                } : { language: 'en', companionGender: 'male', timezone: 'UTC' },
+            };
+        }
+        usersCache = cache;
+        cacheLoaded = true;
+        console.log(`[Store] Loaded ${Object.keys(cache).length} users from Postgres`);
+    }
+    catch (err) {
+        console.error('[Store] Failed to load from Postgres:', err.message);
+        // Fall back to JSON
+        const path = (0, path_1.join)(DATA_DIR, 'users.json');
+        if ((0, fs_1.existsSync)(path))
+            usersCache = JSON.parse((0, fs_1.readFileSync)(path, 'utf-8'));
+    }
+}
+// Write-through: update Postgres + cache
+async function pgSyncUser(id, user) {
+    if (!pgPool)
+        return;
+    try {
+        await pgPool.query(`INSERT INTO users (id, email, token, link_token, companion_name, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (id) DO UPDATE SET email = $2, companion_name = $5`, [id, user.email || '', user.token, user.linkToken || null, user.companionName, user.createdAt]);
+        // Sync channel links
+        if (user.channelLinks) {
+            for (const link of user.channelLinks) {
+                await pgPool.query(`INSERT INTO channel_links (user_id, channel, peer_id, linked_at)
+           VALUES ($1, $2, $3, $4) ON CONFLICT (channel, peer_id) DO UPDATE SET user_id = $1`, [id, link.channel, link.peerId, link.linkedAt]);
+            }
+        }
+        // Legacy telegram
+        if (user.telegramChatId) {
+            await pgPool.query(`INSERT INTO channel_links (user_id, channel, peer_id) VALUES ($1, 'telegram', $2)
+         ON CONFLICT (channel, peer_id) DO UPDATE SET user_id = $1`, [id, String(user.telegramChatId)]);
+        }
+        // Health profile
+        if (user.healthProfile) {
+            const hp = user.healthProfile;
+            await pgPool.query(`INSERT INTO health_profiles (user_id, language, timezone, companion_gender, companion_name, has_band, sleeps_with_band)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         ON CONFLICT (user_id) DO UPDATE SET language = $2, timezone = $3, companion_gender = $4, companion_name = $5, has_band = $6, sleeps_with_band = $7`, [id, hp.language || 'en', hp.timezone || 'UTC', hp.companionGender || 'male',
+                hp.companionName || 'Bryan', hp.hasBand || false, hp.sleepsWithBand || false]);
+        }
+    }
+    catch (err) {
+        console.error(`[Store] Postgres sync failed for ${id}:`, err.message);
+    }
+}
 function getUsers() {
+    if (USE_POSTGRES && cacheLoaded)
+        return usersCache;
+    // Fallback to JSON
     const path = (0, path_1.join)(DATA_DIR, 'users.json');
     if (!(0, fs_1.existsSync)(path))
         return {};
     return JSON.parse((0, fs_1.readFileSync)(path, 'utf-8'));
 }
 function saveUsers(users) {
+    // Always write JSON (backward compat)
     (0, fs_1.writeFileSync)((0, path_1.join)(DATA_DIR, 'users.json'), JSON.stringify(users, null, 2));
+    // Update cache
+    if (USE_POSTGRES)
+        usersCache = users;
 }
 function getUserByToken(token) {
     const users = getUsers();
@@ -67,6 +161,8 @@ function updateUser(id, updates) {
     if (users[id]) {
         users[id] = { ...users[id], ...updates };
         saveUsers(users);
+        // Async Postgres sync
+        pgSyncUser(id, users[id]).catch(() => { });
     }
 }
 // ─── Auth middleware ─────────────────────────────────────────────
@@ -234,6 +330,8 @@ app.post('/api/register', (req, res) => {
         (0, fs_1.mkdirSync)((0, path_1.join)(userDataDir, 'health'), { recursive: true });
     }
     console.log(`[Companion] New user registered: ${email || telegram_username || id} (${companion_name || 'Bryan'}) channel=${chat_channel || 'none'} linkToken=${linkToken}`);
+    // Sync to Postgres
+    pgSyncUser(id, user).catch(() => { });
     res.json({ token, agentId: id, linkToken, gatewayToken: process.env.OPENCLAW_GATEWAY_TOKEN || '' });
 });
 // Receive screen time data from iOS app
@@ -1079,6 +1177,7 @@ app.post('/api/auth/verify', (req, res) => {
         const userDataDir = (0, path_1.join)(DATA_DIR, '..', '..', '.openclaw-companion', '.openclaw', 'workspace', 'data', 'users', id);
         (0, fs_1.mkdirSync)((0, path_1.join)(userDataDir, 'health'), { recursive: true });
         console.log(`[Auth] New user created via magic link: ${email} → ${id}`);
+        pgSyncUser(id, user).catch(() => { });
     }
     // Clean up pending auth
     delete pending[email.toLowerCase()];
@@ -1350,9 +1449,25 @@ app.post('/api/chat', auth, async (req, res) => {
 // Health check
 app.get('/health', (_, res) => res.json({ status: 'ok', uptime: process.uptime() }));
 // ─── Start ───────────────────────────────────────────────────────
-app.listen(PORT, () => {
-    console.log(`[Companion] Server running on port ${PORT}`);
-    console.log(`[Companion] OpenClaw gateway: ${OPENCLAW_GATEWAY}`);
-    console.log(`[Companion] Gateway WS: ${GATEWAY_WS_URL}`);
+// ─── Startup ─────────────────────────────────────────────────────
+async function start() {
+    // Load users from Postgres if available
+    if (USE_POSTGRES) {
+        console.log('[Companion] Postgres enabled, loading users...');
+        await loadUsersFromPostgres();
+    }
+    else {
+        console.log('[Companion] No DATABASE_URL — using JSON files only');
+    }
+    app.listen(PORT, () => {
+        console.log(`[Companion] Server running on port ${PORT}`);
+        console.log(`[Companion] OpenClaw gateway: ${OPENCLAW_GATEWAY}`);
+        console.log(`[Companion] Gateway WS: ${GATEWAY_WS_URL}`);
+        console.log(`[Companion] Storage: ${USE_POSTGRES ? 'Postgres + JSON (write-through)' : 'JSON only'}`);
+    });
+}
+start().catch(err => {
+    console.error('[Companion] Failed to start:', err);
+    process.exit(1);
 });
 //# sourceMappingURL=index.js.map
