@@ -1297,7 +1297,7 @@ import WebSocket from 'ws';
 import * as ed from '@noble/ed25519';
 import { createHash as cryptoCreateHash } from 'crypto';
 
-const GATEWAY_WS_URL = process.env.GATEWAY_WS_URL || 'ws://openclaw:18789';
+const GATEWAY_WS_URL = process.env.GATEWAY_WS_URL || 'ws://openclaw:18809';
 const GATEWAY_TOKEN = process.env.OPENCLAW_GATEWAY_TOKEN || '';
 
 let deviceIdentity: { deviceId: string; publicKey: string; privateKey: Uint8Array } | null = null;
