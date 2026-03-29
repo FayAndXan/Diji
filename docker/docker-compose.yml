@@ -3,6 +3,24 @@
 
 
 services:
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=diji
+      - POSTGRES_USER=diji
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-diji_dev_2026}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ../db/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U diji"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   redis:
     image: redis:7-alpine
     ports:
@@ -81,7 +99,7 @@ services:
       - "3950:3950"
     environment:
       - REDIS_URL=redis://redis:6379
-      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_URL=postgresql://diji:${POSTGRES_PASSWORD:-diji_dev_2026}@postgres:5432/diji
       - DATA_DIR=/app/data
       - SUPERMEMORY_API_KEY=${SUPERMEMORY_API_KEY}
       - RESEND_API_KEY=${RESEND_API_KEY}
@@ -90,10 +108,14 @@ services:
     volumes:
       - companion-data:/app/data
     depends_on:
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
     restart: always
 
 volumes:
+  postgres-data:
   redis-data:
   companion-data:
   openclaw-userdata-default:
