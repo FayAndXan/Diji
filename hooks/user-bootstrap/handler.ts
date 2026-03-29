@@ -15,17 +15,20 @@ function parseSessionKey(sessionKey: string | undefined): { channel: string | nu
     return { channel: null, peerId: null };
   }
   
-  // Format: agent:main:telegram:direct:PEER_ID
-  // or: agent:main:whatsapp-cloud:direct:PHONE_NUMBER
-  // or: agent:main:openclaw-weixin:direct:wxid_xxx
+  // per-peer format: agent:main:direct:UUID (identityLinks resolved)
+  // per-channel-peer format: agent:main:telegram:direct:PEER_ID
   const parts = sessionKey.split(':');
   
-  // Look for known channel names in the parts
+  // per-peer: agent:main:direct:UUID
+  if (parts.length === 4 && parts[2] === 'direct') {
+    return { channel: 'identity', peerId: parts[3] };
+  }
+  
+  // per-channel-peer: look for known channel names
   const channels = ['telegram', 'whatsapp-cloud', 'openclaw-weixin', 'app'];
   for (let i = 0; i < parts.length; i++) {
     if (channels.includes(parts[i])) {
       const channel = parts[i];
-      // peerId is typically the last part
       const peerId = parts[parts.length - 1];
       if (peerId && peerId !== channel && peerId !== 'direct' && peerId !== 'group') {
         return { channel, peerId };

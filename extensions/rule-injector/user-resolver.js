@@ -33,7 +33,13 @@ export function parseSessionKey(sessionKey) {
   
   const parts = sessionKey.split(':');
   
-  // Format: agent:main:telegram:direct:PEER_ID
+  // per-peer format: agent:main:direct:UUID (no channel, identityLinks resolved)
+  if (parts.length === 4 && parts[2] === 'direct') {
+    const peerId = parts[3];
+    return { channel: 'identity', peerId, isMain: false };
+  }
+  
+  // per-channel-peer format: agent:main:telegram:direct:PEER_ID
   const channels = ['telegram', 'whatsapp-cloud', 'openclaw-weixin', 'app'];
   for (let i = 0; i < parts.length; i++) {
     if (channels.includes(parts[i])) {

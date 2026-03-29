@@ -44,6 +44,13 @@ function findUserByPeer(channel, peerId) {
 function parseSessionKey(sessionKey) {
   if (!sessionKey || sessionKey === 'main') return { channel: null, peerId: null };
   const parts = sessionKey.split(':');
+  
+  // per-peer format: agent:main:direct:UUID (identityLinks resolved)
+  if (parts.length === 4 && parts[2] === 'direct') {
+    return { channel: 'identity', peerId: parts[3] };
+  }
+  
+  // per-channel-peer format
   const channels = ['telegram', 'whatsapp-cloud', 'openclaw-weixin', 'app'];
   for (let i = 0; i < parts.length; i++) {
     if (channels.includes(parts[i])) {
