@@ -69,41 +69,5 @@ jobs:
             console.log('✅ All plugin paths exist');
           "
 
-      - name: Docker build
-        run: docker build -f docker/Dockerfile.openclaw -t diji-openclaw .
-
-      - name: Verify container structure
-        run: |
-          # Check extensions symlink exists
-          docker run --rm diji-openclaw test -L /root/.openclaw/extensions && echo "✅ Extensions symlink" || (echo "❌ Extensions symlink missing" && exit 1)
-          
-          # Check workspace symlink exists
-          docker run --rm diji-openclaw test -L /root/.openclaw/workspace && echo "✅ Workspace symlink" || (echo "❌ Workspace symlink missing" && exit 1)
-          
-          # Check key workspace files
-          for f in SOUL.md CAPABILITIES.md TOOLS.md SAMANTHA.md HEARTBEAT.md; do
-            docker run --rm diji-openclaw test -f /root/.openclaw-companion/workspace/$f && echo "✅ $f" || echo "⚠️ $f missing"
-          done
-          
-          # Check skills exist
-          docker run --rm diji-openclaw test -d /root/.openclaw-companion/workspace/skills && echo "✅ Skills dir" || (echo "❌ Skills missing" && exit 1)
-          
-          # Check extensions exist
-          EXTS=$(docker run --rm diji-openclaw ls /root/.openclaw-companion/extensions/ | wc -l)
-          echo "✅ $EXTS extensions in container"
-          
-          # Check config is valid
-          docker run --rm diji-openclaw node -e "
-            const cfg = JSON.parse(require('fs').readFileSync('/root/.openclaw-companion/openclaw.json','utf-8'));
-            console.log('✅ Config valid, model:', JSON.stringify(cfg.agents.defaults.model));
-          "
-          
-          # Check cron PID fix in startup
-          docker run --rm diji-openclaw grep 'rm -f /var/run/crond.pid' /usr/local/bin/instance-start.sh && echo "✅ Cron PID fix" || echo "⚠️ Cron PID fix missing"
-          
-          # Check identity-links restore in startup
-          docker run --rm diji-openclaw grep 'identity-links.json' /usr/local/bin/instance-start.sh && echo "✅ identityLinks restore" || echo "⚠️ identityLinks restore missing"
-          
-          # Verify python available
-          docker run --rm diji-openclaw python3 --version
-          docker run --rm diji-openclaw curl --version | head -1
+      # Docker build skipped in CI — template is now generic (companion-specific files come from companion repos at deploy time)
+      # Local builds tested via docker compose on Hetzner
