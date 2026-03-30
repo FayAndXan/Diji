@@ -1,5 +1,14 @@
 {
   "agents": {
+    "list": [{
+      "id": "main",
+      "default": true,
+      "tools": {
+        "profile": "minimal",
+        "alsoAllow": ["web_search", "web_fetch", "exec", "image", "pdf", "tts", "read", "write", "edit", "companion_message"],
+        "deny": ["session_status", "message"]
+      }
+    }],
     "defaults": {
       "model": {
         "primary": "anthropic/claude-sonnet-4-6"
@@ -12,6 +21,9 @@
           }
         }
       },
+      "bootstrapMaxChars": 5000,
+      "bootstrapTotalMaxChars": 15000,
+      "bootstrapPromptTruncationWarning": "off",
       "userTimezone": "UTC",
       "contextPruning": {
         "mode": "cache-ttl",
@@ -106,6 +118,7 @@
       "companion-mood-detector",
       "companion-schedule-learner",
       "companion-auto-memory",
+      "companion-message",
       "rule-injector",
       "telegram"
     ],
@@ -114,6 +127,7 @@
         "${OPENCLAW_STATE_DIR}/extensions/companion-mood-detector",
         "${OPENCLAW_STATE_DIR}/extensions/companion-schedule-learner",
         "${OPENCLAW_STATE_DIR}/extensions/companion-auto-memory",
+        "${OPENCLAW_STATE_DIR}/extensions/companion-message",
         "${OPENCLAW_STATE_DIR}/extensions/rule-injector"
       ]
     },
@@ -121,8 +135,12 @@
       "companion-mood-detector": { "enabled": true },
       "companion-schedule-learner": { "enabled": true },
       "companion-auto-memory": { "enabled": true },
+      "companion-message": { "enabled": true },
       "rule-injector": { "enabled": true }
     }
+  },
+  "skills": {
+    "allowBundled": ["__disable_all_bundled__"]
   },
   "tools": {
     "web": {

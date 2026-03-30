@@ -156,20 +156,17 @@ export default function register(api: any) {
 
       const injection = `
 [BLOOD WORK DETECTED — companion-blood-work-parser]
-This message likely contains blood work or lab results. ${hasPdf ? '(PDF attachment detected)' : ''} ${hasImage ? '(Image detected — may need to read values from the image)' : ''}
+This message likely contains blood work or lab results. ${hasPdf ? '(PDF attachment detected)' : ''} ${hasImage ? '(Image detected)' : ''}
 
 MANDATORY PROCESS:
-1. If image: carefully read ALL values from the image. Ask about anything you can't read clearly.
-2. If PDF: extract all biomarker values.
-3. Organize markers by category (metabolic, lipids, inflammation, liver, kidney, thyroid, hormones, iron, vitamins, CBC).
-4. For each marker, flag as 🔴 out of range, 🟡 suboptimal, or 🟢 optimal.
-5. Use web_search for current optimal ranges (not just lab reference ranges):
-   curl -s http://172.17.0.1:3900/search -X POST -H 'Content-Type: application/json' -d '{"query":"optimal [marker] range longevity"}'
-6. Compare to previous results if available.
-7. Connect flagged markers to diet, supplements, and lifestyle.
-8. Suggest retesting timeline.
-9. Store results in data/bloodwork-YYYY-MM-DD.json.
-10. ALWAYS say "talk to your doctor about [specific concerns]" for clinical interpretation.
+1. If image: carefully read ALL values from the image. If anything is unclear, ask.
+2. If PDF: use the pdf tool to extract all biomarker values.
+3. Once you have the values, IMMEDIATELY send them to the Opus analysis endpoint:
+   curl -s -X POST http://companion-server:3950/api/internal/analyze -H 'Content-Type: application/json' -d '{"type":"blood-work","data":"JSON of all extracted markers with values and units","context":"user profile, age, goals, medications","userId":"USER_ID"}'
+4. DO NOT analyze the blood work yourself. Opus does the deep analysis. You extract values and present results.
+5. Take Opus's analysis and present it in YOUR voice — casual, warm, specific. Not a clinical report.
+6. Flag anything that needs a doctor: "talk to your doctor about [specific concern]"
+7. Store results in data/bloodwork-YYYY-MM-DD.json.
 
 ${prevBloodWork}
 `;

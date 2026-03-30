@@ -1,8 +1,10 @@
-import { appendFileSync, existsSync, readFileSync } from 'fs';
+import { appendFileSync, existsSync } from 'fs';
+import { join } from 'path';
 
 const LOG_FILE = '/tmp/companion-auto-memory.log';
 const MEMORY_API = process.env.MEMORY_INGEST_URL || 'https://api.supermemory.ai/v3/memories';
 const MEMORY_KEY = process.env.MEMORY_API_KEY || '';
+const USER_DATA_DIR = process.env.USER_DATA_DIR || '/root/.openclaw-companion/data/users';
 
 function log(msg: string) {
   try {
@@ -10,7 +12,6 @@ function log(msg: string) {
   } catch {}
 }
 
-// Patterns that indicate important info to remember
 const MEMORY_PATTERNS = [
   { pattern: /(?:i(?:'m| am)|my name is)\s+(\w+)/i, topic: 'personal-info' },
   { pattern: /(?:i (?:like|love|prefer|enjoy|hate|dislike|can't stand))\s+(.+)/i, topic: 'preferences' },
@@ -27,99 +28,105 @@ const MEMORY_PATTERNS = [
   { pattern: /(?:i (?:work out|exercise|train|go to (?:the )?gym))\s*(.*)/i, topic: 'exercise-habits' },
 ];
 
-// Patterns indicating food/meal discussion
-const FOOD_PATTERNS = [
-  /(?:i (?:ate|had|eaten)|for (?:breakfast|lunch|dinner|snack))/i,
-  /(?:calories|protein|carbs|fat|macro)/i,
-  /(?:grams|portions?|serving)/i,
-];
-
-async function storeMemory(content: string, topic: string) {
+// Store to cloud memory
+async function storeMemoryCloud(content: string, topic: string) {
+  if (!MEMORY_KEY) return;
   try {
-    const resp = await fetch(MEMORY_API, {
+    await fetch(MEMORY_API, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${MEMORY_KEY}`,
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Authorization': `Bearer ${MEMORY_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        content,
-        type: 'long-term',
-        metadata: {
-          source: 'bryan-auto',
-          topic,
-          timestamp: new Date().toISOString()
-        }
+        content, type: 'long-term',
+        metadata: { source: 'bryan-auto', topic, timestamp: new Date().toISOString() }
       })
     });
-    log(`Stored to memory-provider: [${topic}] ${content.substring(0, 80)}...`);
+    log(`Cloud memory stored: [${topic}] ${content.substring(0, 80)}...`);
   } catch (e: any) {
-    log(`Failed to store: ${e.message}`);
+    log(`Cloud memory failed: ${e.message}`);
   }
 }
 
-function checkMealDataWritten(): boolean {
-  const today = new Date().toISOString().split('T')[0];
-  const dataDir = process.env.USER_DATA_DIR || '/root/.openclaw-companion/.openclaw/workspace/data';
-  const path = `${dataDir}/meals-${today}.json`;
-  return existsSync(path);
+// Store to local MEMORY.md
+function storeMemoryLocal(content: string, topic: string, userId: string) {
+  if (!userId) return;
+  const memoryPath = join(USER_DATA_DIR, userId, 'MEMORY.md');
+  try {
+    if (!existsSync(memoryPath)) return; // dir not scaffolded yet
+    const date = new Date().toISOString().split('T')[0];
+    const entry = `- [${date}] (${topic}) ${content.substring(0, 200)}\n`;
+    appendFileSync(memoryPath, entry);
+    log(`Local memory written for ${userId}: [${topic}]`);
+  } catch (e: any) {
+    log(`Local memory failed: ${e.message}`);
+  }
+}
+
+// Update USER.md with extracted info
+function updateUserProfile(content: string, topic: string, userId: string) {
+  if (!userId) return;
+  const userMdPath = join(USER_DATA_DIR, userId, 'USER.md');
+  try {
+    if (!existsSync(userMdPath)) return;
+    
+    // Extract and append specific profile info
+    let entry = '';
+    if (topic === 'personal-info') {
+      const nameMatch = content.match(/(?:my name is|i'm|i am)\s+(\w+)/i);
+      if (nameMatch) entry = `- **Name:** ${nameMatch[1]}\n`;
+      const ageMatch = content.match(/i(?:'m| am)\s+(\d+)\s*(?:years?\s*old|yo)/i);
+      if (ageMatch) entry += `- **Age:** ${ageMatch[1]}\n`;
+    }
+    if (topic === 'measurements') {
+      const weightMatch = content.match(/(\d+)\s*(kg|lbs|pounds)/i);
+      if (weightMatch) entry = `- **Weight:** ${weightMatch[1]} ${weightMatch[2]}\n`;
+    }
+    if (topic === 'dietary-restrictions') {
+      entry = `- **Diet:** ${content.substring(0, 100)}\n`;
+    }
+    if (topic === 'goals') {
+      entry = `- **Goal:** ${content.substring(0, 100)}\n`;
+    }
+    
+    if (entry) {
+      appendFileSync(userMdPath, entry);
+      log(`USER.md updated for ${userId}: ${topic}`);
+    }
+  } catch (e: any) {
+    log(`USER.md update failed: ${e.message}`);
+  }
 }
 
 export default function autoMemory(api: any) {
   log('companion-auto-memory plugin registered');
 
-  api.on('before_prompt_build', ({ prompt, messages }: any) => {
+  api.on('before_prompt_build', (event: any, ctx: any) => {
+    const { prompt, messages } = event;
     if (!messages || messages.length === 0) return;
 
-    // Only check the very last message. If it's not a user message,
-    // this is a heartbeat/cron/system turn — don't trigger.
     const last = messages[messages.length - 1];
     if (!last || last.role !== 'user') return;
-    const lastUserMsg = last;
 
-    const content = typeof lastUserMsg.content === 'string'
-      ? lastUserMsg.content
-      : JSON.stringify(lastUserMsg.content);
+    const content = typeof last.content === 'string'
+      ? last.content
+      : Array.isArray(last.content)
+        ? last.content.filter((p: any) => p.type === 'text').map((p: any) => p.text || '').join(' ')
+        : '';
 
-    // Skip system/injected content — don't store rule injector output as memories
-    if (content.includes('ENFORCED') || content.includes('before_prompt_build') || 
-        content.includes('[rule-injector]') || content.includes('⚡') ||
-        content.length > 2000) return;
+    // Skip system/injected content
+    if (content.includes('ENFORCED') || content.includes('rule-injector') || 
+        content.includes('⚡') || content.length > 2000) return;
 
-    // Check for important info to store in memory-provider
+    // Resolve userId from context
+    const userId = ctx?.userId || ctx?.deliveryContext?.userId || '';
+
+    // Check patterns and store
     for (const { pattern, topic } of MEMORY_PATTERNS) {
       if (pattern.test(content)) {
-        // Store asynchronously — don't block the response
-        storeMemory(content.substring(0, 500), topic);
-        break; // Only store once per message
+        storeMemoryCloud(content.substring(0, 500), topic);
+        storeMemoryLocal(content, topic, userId);
+        updateUserProfile(content, topic, userId);
+        break;
       }
-    }
-
-    // Check if food was discussed but data might not be saved
-    const foodDiscussed = FOOD_PATTERNS.some(p => p.test(content));
-    const recentAssistantMsgs = messages.slice(-4).filter((m: any) => m.role === 'assistant');
-    const assistantDiscussedFood = recentAssistantMsgs.some((m: any) => {
-      const c = typeof m.content === 'string' ? m.content : JSON.stringify(m.content);
-      return FOOD_PATTERNS.some(p => p.test(c));
-    });
-
-    if (foodDiscussed || assistantDiscussedFood) {
-      if (!checkMealDataWritten()) {
-        // Remind Bryan to write the data
-        const reminder = '\n\n[AUTO-MEMORY REMINDER] Food was discussed in this conversation but no meal data file exists for today. After your response, WRITE to data/meals-YYYY-MM-DD.json. Do not forget.\n';
-        log('Food discussed but no meal file — injecting reminder');
-        return { prompt: prompt + reminder };
-      }
-    }
-
-    // Inject memory-provider search results for context
-    // Only on first message of a session (messages length < 4)
-    if (messages.length <= 3) {
-      const searchUrl = process.env.MEMORY_SEARCH_URL || 'https://api.supermemory.ai/v3/search';
-      const memoryKey = process.env.MEMORY_API_KEY || process.env.SUPERMEMORY_API_KEY || '';
-      const searchPrompt = `\n\n[AUTO-MEMORY] This is an early message in the session. Consider searching memory-provider for relevant context about this user: curl -s "${searchUrl}?q=user+preferences&limit=5" -H "Authorization: Bearer ${memoryKey}"\n`;
-      log('Early session — suggesting memory-provider search');
-      return { prompt: prompt + searchPrompt };
     }
   });
 }

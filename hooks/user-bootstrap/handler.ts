@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, existsSync, appendFileSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 
 const USER_DATA_DIR = process.env.USER_DATA_DIR || '/root/.openclaw-companion/.openclaw/workspace/data/users';
@@ -15,8 +15,6 @@ function parseSessionKey(sessionKey: string | undefined): { channel: string | nu
     return { channel: null, peerId: null };
   }
   
-  // per-peer format: agent:main:direct:UUID (identityLinks resolved)
-  // per-channel-peer format: agent:main:telegram:direct:PEER_ID
   const parts = sessionKey.split(':');
   
   // per-peer: agent:main:direct:UUID
@@ -36,7 +34,7 @@ function parseSessionKey(sessionKey: string | undefined): { channel: string | nu
     }
   }
   
-  // Fallback: dm:channel:peerId format
+  // Fallback: dm:channel:peerId
   if (parts.length >= 3 && parts[0] === 'dm') {
     return { channel: parts[1], peerId: parts.slice(2).join(':') };
   }
@@ -63,6 +61,45 @@ function tryReadFile(path: string): string | null {
   }
 }
 
+// Scaffold user directory + files on first contact
+function scaffoldUserDir(userId: string, user: any) {
+  const userDir = join(USER_DATA_DIR, userId);
+  
+  if (existsSync(userDir)) return; // already scaffolded
+  
+  log(`Scaffolding user dir for ${userId}`);
+  
+  // Create dirs
+  mkdirSync(userDir, { recursive: true });
+  mkdirSync(join(userDir, 'health'), { recursive: true });
+  mkdirSync(join(userDir, 'meals'), { recursive: true });
+  
+  // Create USER.md with whatever we know
+  const name = user.healthProfile?.name || user.telegramFirstName || user.name || 'Unknown';
+  const tz = user.healthProfile?.timezone || 'UTC';
+  const channel = user.channel || 'unknown';
+  const firstSeen = new Date().toISOString();
+  
+  const userMd = `# ${name}
+
+- **First seen:** ${firstSeen}
+- **Channel:** ${channel}
+- **Timezone:** ${tz}
+- **Onboarding:** in progress
+`;
+  
+  writeFileSync(join(userDir, 'USER.md'), userMd);
+  log(`Created USER.md for ${userId}: ${name}`);
+  
+  // Create empty MEMORY.md
+  writeFileSync(join(userDir, 'MEMORY.md'), `# Memory — ${name}\n\n`);
+  log(`Created MEMORY.md for ${userId}`);
+  
+  // Create empty followups
+  writeFileSync(join(userDir, 'followups.json'), '[]');
+  log(`Created followups.json for ${userId}`);
+}
+
 export default async (event: any) => {
   log(`Hook fired! event.type=${event.type} event.action=${event.action}`);
   
@@ -84,10 +121,6 @@ export default async (event: any) => {
   const user = await lookupUser(channel, peerId);
   if (!user) {
     log(`No user found for ${channel}:${peerId} — guest user, rule-injector will handle reply`);
-    
-    // Don't send a message here — rule-injector injects a guest SOUL that makes the agent
-    // send the gate reply. Sending here too would cause double messages.
-    // Just wipe bootstrap files so the agent has minimal context.
     if (context.bootstrapFiles) {
       context.bootstrapFiles = [];
     }
@@ -96,6 +129,9 @@ export default async (event: any) => {
   
   const userId = user.id;
   log(`User resolved: ${userId} (${channel}:${peerId})`);
+  
+  // Scaffold user dir if first contact
+  scaffoldUserDir(userId, user);
   
   const userDir = join(USER_DATA_DIR, userId);
   
