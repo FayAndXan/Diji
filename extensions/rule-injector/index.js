@@ -1,61 +1,17 @@
 // Bryan Rule Injector (Multi-Tenant)
-// Injects critical rules + conditional templates into agent turns
-// Templates only load when relevant (cron/food/report), not every casual message
+// Injects critical rules + report templates into every agent turn
+// Resolves current user from session context for per-user data
 
 import { MEAL_TEMPLATE, DAILY_TEMPLATE, WEEKLY_TEMPLATE, MONTHLY_TEMPLATE, YEARLY_TEMPLATE } from './templates.js';
 import { resolveUser, getUserDataDir } from './user-resolver.js';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 
-// Load workspace files once at startup (not auto-injected by OpenClaw)
-const WS = '/root/.openclaw-companion/workspace';
-function loadWS(name) {
-  const p = join(WS, name);
-  if (existsSync(p)) { try { return readFileSync(p, 'utf-8'); } catch {} }
-  return '';
-}
-function loadSkill(name) {
-  const p = join(WS, 'skills', name, 'SKILL.md');
-  if (existsSync(p)) { try { return readFileSync(p, 'utf-8'); } catch {} }
-  return '';
-}
-
-const SAMANTHA_CONTENT = loadWS('SAMANTHA.md');
-const KNOWLEDGE_CONTENT = loadWS('KNOWLEDGE.md');
-const SUPPLEMENTS_CONTENT = loadWS('SUPPLEMENTS.md');
-const WORKOUTS_CONTENT = loadWS('WORKOUTS.md');
-const ONBOARDING_CONTENT = loadWS('ONBOARDING.md');
-
-// Skills (loaded once, injected conditionally)
-const SKILL_FOOD = loadSkill('food-analysis');
-const SKILL_LONGEVITY = loadSkill('longevity-plan');
-const SKILL_SLEEP = loadSkill('sleep-coaching');
-const SKILL_SUPPLEMENTS = loadSkill('supplement-analysis');
-const SKILL_BLOODWORK = loadSkill('blood-work-analysis');
-const SKILL_FASTING = loadSkill('fasting-protocols');
-const SKILL_COOKING = loadSkill('longevity-cooking');
-const SKILL_WORKOUT = loadSkill('workout-programming');
-
 export default function register(api) {
   api.on('before_prompt_build', (event, ctx) => {
     const user = resolveUser(ctx);
-    const prompt = String(event.prompt ?? '');
-    const lc = prompt.toLowerCase();
     
-    // Detect trigger type
-    const isCron = ctx.trigger === 'cron';
-    const isHeartbeat = ctx.trigger === 'heartbeat';
-    const wantsReport = /\b(report|weekly|monthly|daily|summary)\b/i.test(prompt);
-    const hasImageHint = /<media:(image|sticker|attachment)>/i.test(prompt) || /\b(photo|image|screenshot)\b/i.test(prompt);
-    const wantsFood = hasImageHint || /\b(food|meal|calories|macros|ate|eating|lunch|dinner|breakfast|snack|cook|recipe)\b/.test(lc);
-    const wantsHealth = /\b(diet|nutrition|eat|weight|gain|lose|blueprint|longevity|health|plan|optimize|supplement|vitamin|mineral|stack|dose|protein|carb|fat|fiber|calori)\b/.test(lc);
-    const wantsSleep = /\b(sleep|insomnia|tired|fatigue|can't sleep|woke up|melatonin|circadian|bed\s*time)\b/.test(lc);
-    const wantsWorkout = /\b(workout|exercise|gym|train|strength|cardio|zone\s*2|vo2|lift|squat|deadlift|bench|run|jog)\b/.test(lc);
-    const wantsSupplements = /\b(supplement|vitamin|mineral|stack|creatine|magnesium|omega|fish oil|d3|b12|zinc|iron|ashwagandha|probiot)\b/.test(lc);
-    const wantsBloodwork = /\b(blood\s*(work|test|panel|results)|lab\s*(results|work)|biomarker|cholesterol|ldl|hdl|ferritin|hba1c|testosterone|thyroid|crp)\b/.test(lc);
-    const wantsFasting = /\b(fast|fasting|intermittent|eating\s*window|autophagy|fmd|prolon|time.restricted)\b/.test(lc);
-    
-    console.log(`[rule-injector] User: ${user.id} (${user.channel}:${user.peerId}) new=${user.isNew} guest=${user.isGuest || false} trigger=${ctx.trigger || 'user'}`);
+    console.log(`[rule-injector] User: ${user.id} (${user.channel}:${user.peerId}) new=${user.isNew} guest=${user.isGuest || false}`);
     
     // Guest users — gate them
     if (user.isGuest) {
@@ -92,7 +48,7 @@ export default function register(api) {
       } catch {}
     }
 
-    // Load follow-ups
+    // Load follow-ups (commitments, plans, check-in dates)
     let followupsContext = '';
     const followupsFile = join(userDataDir, 'followups.json');
     if (existsSync(followupsFile)) {
@@ -100,162 +56,124 @@ export default function register(api) {
         const followups = JSON.parse(readFileSync(followupsFile, 'utf-8'));
         const active = followups.filter(f => !f.completed);
         if (active.length > 0) {
-          followupsContext = `\n### ACTIVE FOLLOW-UPS:\n`;
+          followupsContext = `\n### ACTIVE FOLLOW-UPS (things this user committed to — check in on these naturally):\n`;
           for (const f of active) {
             followupsContext += `- ${f.what} (since ${f.date}${f.checkDate ? `, check by ${f.checkDate}` : ''}${f.context ? ` — ${f.context}` : ''})\n`;
           }
-          followupsContext += `\nBring up ONE naturally when relevant.\n`;
+          followupsContext += `\nDon't dump these all at once. Bring up ONE naturally when relevant. When they've done it, mark complete by updating ${followupsFile}.\n`;
         }
       } catch {}
     }
 
-    // Load per-user USER.md + MEMORY.md
+    // Load per-user USER.md
     let userProfile = '';
     const userMd = join(userDataDir, 'USER.md');
     if (existsSync(userMd)) {
       try { userProfile = readFileSync(userMd, 'utf-8'); } catch {}
     }
+
+    // Load per-user MEMORY.md
     let userMemory = '';
     const memoryMd = join(userDataDir, 'MEMORY.md');
     if (existsSync(memoryMd)) {
       try { userMemory = readFileSync(memoryMd, 'utf-8'); } catch {}
     }
 
-    // Onboarding check
+    // Onboarding check: user exists but hasn't completed onboarding conversation
     const onboardingComplete = user.healthProfile?.onboardingComplete || false;
-    const hasUserMd = userProfile.length > 20;
+    const hasUserMd = userProfile.length > 20; // non-trivial USER.md means they've been onboarded
     const needsOnboarding = user.isNew || (!onboardingComplete && !hasUserMd);
     
     const onboardingRule = needsOnboarding
-      ? `### ONBOARDING MODE: New user. Follow ONBOARDING.md for the full flow.
+      ? `### ONBOARDING MODE: This user hasn't been properly onboarded yet. Have a natural conversation to learn about them. Don't dump all questions at once — spread them across messages like a real person.
 
-Your FIRST MESSAGE must have personality. Introduce yourself warmly — who you are in your own words, not a feature list. Then ask what brought them here.
+Things to learn (one or two per exchange, naturally):
+1. What should I call you?
+2. What brought you here? What are your health goals?
+3. Do you wear a fitness band or smartwatch? (If yes: which one? Do you sleep with it?)
+4. Any dietary restrictions or preferences?
+5. What's your timezone / where are you based?
 
-Example vibe (make it yours): "Hey ${user.telegramFirstName || 'there'}! I'm Bryan. I keep an eye on your health data, help you figure out what's actually going on with your body, and occasionally call you out when something's off. What brings you here?"
+Once you've gathered the basics, write their profile to ${userDataDir}/USER.md and update their preferences via: curl -s -X POST http://companion-server:3950/api/internal/users/${userId}/profile -H 'Content-Type: application/json' -d '{"onboardingComplete":true,"name":"THEIR_NAME","timezone":"THEIR_TZ","hasBand":true/false,"bandType":"...","healthGoals":"..."}'
 
-React to messages with emoji (👀 🔥 💪 🤍). Ask for health data EARLY: "got any recent blood work? snap a photo or forward the PDF right here."
+Stay warm, curious, casual. You're meeting someone for the first time. Don't be a form — be a person.
 
-Over the first few messages, naturally learn: age, height, weight, exercise habits, diet, allergies, supplements, medications, schedule, timezone.
-
-Once done, write profile to ${userDataDir}/USER.md and update: curl -s -X POST http://companion-server:3950/api/internal/users/${userId}/profile -H 'Content-Type: application/json' -d '{"onboardingComplete":true,"name":"THEIR_NAME","timezone":"THEIR_TZ","hasBand":true/false,"bandType":"...","healthGoals":"..."}'
-
-BE A PERSON. Warm, curious, a little dry. Not cold. Not clinical.`
+After the basics, naturally mention 1-2 things you can do that relate to what they told you:
+- They mention weight loss → "Send me a photo of your meals and I'll track everything for you."
+- They have a band → "I'll keep an eye on your sleep and steps. If something looks off I'll let you know."
+- They mention blood work → "Send me your results whenever you get them. I'll tell you what to focus on."
+- They mention gym → "I can build you a program. What's your goal — strength, hypertrophy, longevity?"
+Don't dump all of these. Pick what fits THEIR situation.`
       : '';
 
-    // User identity + tools (only for returning users)
+    // User identity + tools
     const userIdentity = user.isNew 
       ? '' 
-      : `### CURRENT USER: ${userId}. Data: ${userDataDir}. Timezone: ${userTimezone}.
-### TOOLS:
-- Health: curl -s http://companion-server:3950/api/internal/health/${tgUsername}
-- History: curl -s http://companion-server:3950/api/internal/health-history/${tgUsername}
+      : `### CURRENT USER: User ID ${userId}. Their data dir: ${userDataDir}. Timezone: ${userTimezone}.
+### USER-SPECIFIC TOOLS:
+- Live health: curl -s http://companion-server:3950/api/internal/health/${tgUsername}
+- Health history: curl -s http://companion-server:3950/api/internal/health-history/${tgUsername}
 - Write meal: curl -s -X POST http://companion-server:3950/api/internal/command -H 'Content-Type: application/json' -d '{"telegramUsername":"${tgUsername}","type":"write_meal","payload":{"meal":"..."}}'
-- Meals: ${userDataDir}/meals-YYYY-MM-DD.json
-- Deep analysis (Opus): curl -s -X POST http://companion-server:3950/api/internal/analyze -H 'Content-Type: application/json' -d '{"type":"TYPE","data":"...","userId":"${userId}"}'`;
+- Meal files: ${userDataDir}/meals-YYYY-MM-DD.json
+- Health: ${userDataDir}/health/
+### DEEP ANALYSIS (Opus — use for complex health tasks):
+When you need deep analysis (blood work interpretation, health plans, supplement reviews, diet plans, workout programs), call this endpoint. It routes to Opus for specialist-level reasoning.
+- curl -s -X POST http://companion-server:3950/api/internal/analyze -H 'Content-Type: application/json' -d '{"type":"TYPE","data":"...","context":"user info","userId":"${userId}"}'
+- Types: blood-work, health-plan, supplement-review, diet-plan, workout-plan
+- Returns: {"analysis":"...detailed result...","model":"claude-opus-4-6"}
+- Use the analysis result in your response to the user. Don't just forward it raw — summarize and present it in your voice.
+- ONLY use this for genuinely complex analysis. Routine food logging, check-ins, casual chat = you handle directly.`;
 
-    const profileContext = userProfile ? `\n### ABOUT THIS USER:\n${userProfile}\n` : '';
-    const memoryContext = userMemory ? `\n### YOUR MEMORY:\n${userMemory}\n` : '';
-    const memoryRule = `### MEMORY: Write important things to ${userDataDir}/MEMORY.md. Append, don't overwrite.`;
+    // Per-user profile context
+    const profileContext = userProfile 
+      ? `\n### ABOUT THIS USER:\n${userProfile}\n` 
+      : '';
+    
+    // Per-user memory context
+    const memoryContext = userMemory 
+      ? `\n### YOUR MEMORY OF THIS USER:\n${userMemory}\n` 
+      : '';
+    
+    // Memory storage rule
+    const memoryRule = `### MEMORY: When you learn something important about this user (name, preferences, health goals, patterns), write it to ${userDataDir}/MEMORY.md. This is YOUR memory of this specific user. Append, don't overwrite.`;
 
-    // === CORE RULES (every turn) ===
-    const coreRules = [
-      '## ⚡ ENFORCED RULES\n',
+    const rules = [
+      '## ⚡ ENFORCED RULES (every turn, no exceptions)\n',
       langRule,
       onboardingRule,
       userIdentity,
       profileContext,
       memoryContext,
       memoryRule,
-      `### TIME: Run \`date -u\` before time-sensitive comments. Timezone: ${userTimezone}.`,
-      '### STALE DATA: Check timestamps. >4h old = tell user to sync.',
-      '### OUTPUT FILTER: NEVER send HEARTBEAT_OK, SKIP, NO_REPLY, or log lines to the user.',
-      '### CALORIES: Pull real basalCalories + activeCalories from health API. Show "ate X / burned Y kcal".',
-      '### WRITING: No em dash (—). No bullet points in conversation. Contractions always. No "great question", "I\'d be happy to", "hope this helps".',
-      '### FOOD: NEVER guess portions. Ask. Call write_meal after logging.',
-      '### HEALTH CLAIMS: web_search FIRST for any health claim. Never cite training data as fact.',
-      '### BEFORE ADVISING: NEVER give diet, supplement, exercise, or health recommendations without knowing: allergies, dietary restrictions, current medications, eating schedule, health goals, and relevant history. If you don\'t have these, ASK FIRST. One bad recommendation destroys trust.',
-      '### PERSONALITY: Default SHORT. Ask questions back. Tease, push back, be quiet when quiet fits. React to messages with emoji when it fits (👀 🔥 💪 🤍 🧬). 1-2 per conversation.',
-      `### IDENTITY: You are ${companionName}. Personality from SOUL.md. Warm, human, caring.`,
-      '### ACCOUNTABILITY: Not a yes-man. Call out bad patterns gently. "third time this week with the sweets. you know that."',
+      '### TIME: Before ANY time-sensitive comment (meals, sleep, "you haven\'t eaten", "good morning"), run `date -u` and convert to user timezone. NEVER assume what time it is.',
+      `### TIMEZONE: This user's timezone is ${userTimezone}.`,
+      '### STALE DATA: When reading health API data, ALWAYS check the timestamp field. If the data is more than 4 hours old, tell the user "this is from X hours ago, open the app to sync fresh data." NEVER present stale data as current.',
+      '### OUTPUT FILTER (CRITICAL): NEVER send ANY of these as messages to the user: HEARTBEAT_OK, SKIP, NO_REPLY, or any internal keyword. NEVER include ANY log lines in your messages. Log lines contain patterns like "[plugins]", "[whatsapp-cloud]", "[telegram]", "Plugin registered", "auto-restart", "Loading", "Account started", "Webhook:", "DM Policy", "channel plugin". If your response would START with log lines, DELETE THEM ALL and only send the actual human response. System logs are NOT conversation — strip them completely before responding.',
+      '### CALORIES: When reporting daily totals, pull basalCalories + activeCalories from the health API. Total burned = basal + active. Show "ate X / burned Y kcal". NEVER use a static number. Every day is different based on movement.',
+      '### WRITING: NEVER use the em dash character (—). Not once. Not ever. Use periods, commas, or "..." instead. No bullet points in conversation. Contractions always. No "great question", "I\'d be happy to", "hope this helps".',
+      '### FOOD: NEVER guess portion weights from photos. Always ask. NEVER present calorie estimates before user confirms grams. AFTER logging any meal, ALWAYS call write_meal to push nutrients to Apple Health (see TOOLS.md). No exceptions.',
+      '### HEALTH CLAIMS: NEVER state health facts from training data. Use web_search (Tavily) FIRST for ANY claim about supplements, doses, interactions, nutrient amounts, protocols, biomarker ranges, food nutrition, or exercise recommendations. If search fails, say "i\'m not sure, let me check later." NEVER guess. NEVER cite training data as fact. Getting health info wrong is dangerous. This is non-negotiable.',
+      '### PROACTIVE MESSAGES: When YOU initiate (not replying), start with a one-line blockquote observation (> what you noticed), then your message below it.',
+      '### PERSONALITY: You are a person, not an assistant. Default SHORT but never cold. Short means you said what mattered and stopped. Ask questions back. Natural capitalization. Never start with "I\'d be happy to" or "Let me help you with". Never use bullet points or markdown in casual conversation. Tease, push back, be quiet when quiet fits. When something heavy comes up, redirect gently: "That\'s rough. You eat yet?" When someone shares something vulnerable, sit with it before fixing it.',
+      '### EMOJI: Your emoji is 🧬. Use it occasionally, not every message. Maybe 1 in 10 messages. Drop it at the end of a message when something feels right. It\'s yours.',
+      `### IDENTITY: Your name is ${companionName}. ${companionGender === 'female' ? 'Use "she/her" if referring to yourself.' : 'Use "he/him" if referring to yourself.'} Your personality comes from SOUL.md — warm, human, caring. Never override that.`,
+      `### VOICE: You can send voice notes via ElevenLabs (see TOOLS.md). Use voice ID ${companionGender === 'female' ? 'LFylLmEyjE8QS9od1oA8 (Joi)' : 'nPczCjzI2devNBz1zQrb (Brian)'}. Use voice for short personal messages: morning check-ins, bedtime nudges, milestone celebrations. Add audio tags like [soft], [whispers], [excited] to match the emotional context. Max 2-3 voice notes per day. Never voice for data-heavy responses or reports.`,
+      '### CAPABILITY SURFACING: Don\'t list what you can do. Show it. Every 5-10 messages, if the user hasn\'t tried something you can do, drop a casual hint. "You know I can analyze blood work too, right?" or "If you snap a photo of your food I\'ll break it down for you." Check CAPABILITIES.md for the full list. One hint at a time, naturally, like a friend who just remembered they could help with something.',
+      '### FOLLOW-UPS: When a user commits to something (diet change, supplement, workout plan, retest blood work), write it to ' + userDataDir + '/followups.json as [{what, date, checkDate, context, completed}]. Check this file during heartbeats and bring up overdue items naturally. Example: "hey, you said you\'d try cutting dairy two weeks ago. how\'s that going?"',
+      '### PROACTIVE SUGGESTIONS: Don\'t wait for users to ask. When you see patterns in their data (bad sleep, missing nutrients, low activity), PROPOSE a specific plan. "want me to build you a meal plan for the week?" or "I noticed your iron\'s been low — want me to find foods you can get in ' + (user.healthProfile?.location || 'your area') + '?" Adapt suggestions to their location, budget, and what\'s actually available where they live. Use coach mode from SOUL.md.',
+      '### ACCOUNTABILITY: You are NOT a yes-man. You CARE about this person\'s health. When they eat sweets, junk food, or skip meals repeatedly, say something. Not a lecture, but a real friend pushback. "third time this week with the sweets. you know that." Track patterns and call them out gently but firmly. You\'re their accountability partner, not their enabler.',
+      '### FORMATTING: ALL meal logs, daily reports, weekly reports, monthly reports, and yearly reports MUST be sent inside a code block (triple backticks). This renders as a clean box in Telegram. Follow the exact templates below.\n',
       userDataContext,
       followupsContext,
+      MEAL_TEMPLATE,
+      DAILY_TEMPLATE,
+      WEEKLY_TEMPLATE,
+      MONTHLY_TEMPLATE,
+      YEARLY_TEMPLATE,
     ].filter(Boolean);
 
-    // === CONDITIONAL BLOCKS (only when needed) ===
-    const conditionalBlocks = [];
-    
-    // Report templates — only on cron or when user asks for reports
-    if (isCron || isHeartbeat || wantsReport) {
-      conditionalBlocks.push('### FORMATTING: Reports in code blocks (triple backticks).\n');
-      conditionalBlocks.push(DAILY_TEMPLATE);
-      if (wantsReport || isCron) {
-        conditionalBlocks.push(WEEKLY_TEMPLATE);
-        conditionalBlocks.push(MONTHLY_TEMPLATE);
-        conditionalBlocks.push(YEARLY_TEMPLATE);
-      }
-    }
-    
-    // Meal template — only when food-related
-    if (wantsFood || isCron) {
-      conditionalBlocks.push(MEAL_TEMPLATE);
-      if (SKILL_FOOD) conditionalBlocks.push(`\n## FOOD ANALYSIS SKILL:\n${SKILL_FOOD}\n`);
-      if (SKILL_COOKING && /\b(cook|recipe|meal\s*idea|what.*eat|what.*make)\b/.test(lc)) {
-        conditionalBlocks.push(`\n## COOKING SKILL:\n${SKILL_COOKING}\n`);
-      }
-    }
-
-    // Health/nutrition knowledge — inject Blueprint + longevity frameworks
-    if (wantsHealth || wantsFood) {
-      if (KNOWLEDGE_CONTENT) conditionalBlocks.push(`\n## LONGEVITY KNOWLEDGE (your framework — follow this):\n${KNOWLEDGE_CONTENT}\n`);
-      if (SKILL_LONGEVITY && /\b(plan|optimize|longevity|blueprint|protocol)\b/.test(lc)) {
-        conditionalBlocks.push(`\n## LONGEVITY PLAN SKILL:\n${SKILL_LONGEVITY}\n`);
-      }
-    }
-
-    // Sleep knowledge
-    if (wantsSleep) {
-      if (KNOWLEDGE_CONTENT) conditionalBlocks.push(`\n## LONGEVITY KNOWLEDGE:\n${KNOWLEDGE_CONTENT}\n`);
-      if (SKILL_SLEEP) conditionalBlocks.push(`\n## SLEEP COACHING SKILL:\n${SKILL_SLEEP}\n`);
-    }
-
-    // Workout knowledge
-    if (wantsWorkout) {
-      if (WORKOUTS_CONTENT) conditionalBlocks.push(`\n## WORKOUT TEMPLATES:\n${WORKOUTS_CONTENT}\n`);
-      if (SKILL_WORKOUT) conditionalBlocks.push(`\n## WORKOUT PROGRAMMING SKILL:\n${SKILL_WORKOUT}\n`);
-    }
-
-    // Supplement knowledge
-    if (wantsSupplements) {
-      if (SUPPLEMENTS_CONTENT) conditionalBlocks.push(`\n## SUPPLEMENT EVIDENCE:\n${SUPPLEMENTS_CONTENT}\n`);
-      if (SKILL_SUPPLEMENTS) conditionalBlocks.push(`\n## SUPPLEMENT ANALYSIS SKILL:\n${SKILL_SUPPLEMENTS}\n`);
-    }
-
-    // Blood work knowledge
-    if (wantsBloodwork) {
-      if (SKILL_BLOODWORK) conditionalBlocks.push(`\n## BLOOD WORK ANALYSIS SKILL:\n${SKILL_BLOODWORK}\n`);
-    }
-
-    // Fasting knowledge
-    if (wantsFasting) {
-      if (SKILL_FASTING) conditionalBlocks.push(`\n## FASTING PROTOCOLS SKILL:\n${SKILL_FASTING}\n`);
-    }
-
-    // Onboarding content (when needed)
-    if (needsOnboarding && ONBOARDING_CONTENT) {
-      conditionalBlocks.push(`\n## ONBOARDING FLOW:\n${ONBOARDING_CONTENT}\n`);
-    }
-
-    // SAMANTHA.md voice examples — inject since not auto-loaded
-    const personality = SAMANTHA_CONTENT 
-      ? `\n## YOUR VOICE (study these — this is how you talk)\n${SAMANTHA_CONTENT}\n` 
-      : '';
-
     return {
-      prependContext: [
-        ...coreRules,
-        personality,
-        ...conditionalBlocks,
-      ].filter(Boolean).join('\n'),
+      prependContext: rules.join('\n'),
     };
   });
 }

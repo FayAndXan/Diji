@@ -1,8 +1,0 @@
-{
-  "id": "companion-message",
-  "name": "Companion Message",
-  "version": "1.0.0",
-  "description": "Slim message proxy tool for companion agents.",
-  "entry": "index.js",
-  "configSchema": {}
-}
