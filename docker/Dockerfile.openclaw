@@ -28,7 +28,8 @@ COPY extensions/ /root/.openclaw-companion/extensions/
 COPY hooks/ /root/.openclaw-companion/hooks/
 
 # Copy openclaw.json template
-COPY templates/openclaw.json /root/.openclaw-companion/openclaw.json
+# Use Bryan-specific config (generic template is in templates/openclaw.json)
+COPY docker/bryan-openclaw.json /root/.openclaw-companion/openclaw.json
 
 # Copy companion-specific workspace (SOUL.md, AGENTS.md, etc.)
 COPY templates/companion/.openclaw/workspace/ /root/.openclaw-companion/workspace/

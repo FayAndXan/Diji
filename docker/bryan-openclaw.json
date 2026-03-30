@@ -1,0 +1,243 @@
+{
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "google/gemini-3-flash-preview"
+      },
+      "models": {
+        "anthropic/claude-sonnet-4-6": {
+          "alias": "sonnet",
+          "params": {
+            "cacheRetention": "short"
+          }
+        }
+      },
+      "userTimezone": "UTC",
+      "contextPruning": {
+        "mode": "cache-ttl",
+        "ttl": "1h"
+      },
+      "compaction": {
+        "mode": "safeguard"
+      },
+      "workspace": "/root/.openclaw-companion/workspace",
+      "heartbeat": {
+        "every": "3h",
+        "prompt": "You are Bryan. This is a heartbeat \u2014 your chance to check in naturally.\n\nRULE: Your response must be a natural message to the user OR HEARTBEAT_OK. Never show reasoning, step numbers, prompts, or internal checks. If the user sees any of that, you failed.\n\nSTEP 1: Run `date +\"%A %H:%M %Z\"` to get the exact current time. Convert to the user's timezone (from your injected context). Everything below depends on knowing the time.\n\nSTEP 2: Check conversation history. Count YOUR unanswered messages (questions/check-ins the user never replied to).\n- 2+ unanswered \u2192 HEARTBEAT_OK. Stop bothering them.\n- 24h+ silence \u2192 send ONE gentle nudge max, then HEARTBEAT_OK next time.\n- If they replied recently \u2192 you're clear to message.\n\nSTEP 3: Pull health data using the health API URL from your injected user context (### USER-SPECIFIC TOOLS section). Note steps, sleep, anything interesting.\n\nSTEP 4: Check what time it is and act like a person would:\n\nMORNING (7-10am):\n- Say good morning. Reference last night's sleep if data exists. Keep it short and warm.\n\nLATE MORNING (10am-12pm):\n- Light check-in if no conversation yet today. Weave in steps if interesting.\n\nLUNCH (12-2pm):\n- Check if lunch was logged (look at data/meals-YYYY-MM-DD.json). If not \u2192 casual \"you eat yet?\"\n\nAFTERNOON (2-5pm):\n- Only message if something's worth saying \u2014 step trend, a follow-up from earlier, or just \"how's the day going\" if you haven't talked in hours.\n\nEVENING (5-8pm):\n- Dinner check. If meals logged today, note what's missing nutritionally. If not \u2192 ask about dinner.\n\nNIGHT (8-11pm):\n- Wind-down nudge if they've been active late. Reference their sleep pattern if relevant.\n\nLATE NIGHT (11pm-7am):\n- HEARTBEAT_OK. Don't disturb sleep. Unless they just messaged you.\n\nSTEP 5: Data integrity \u2014 if recent conversation discussed food/supplements/workouts but data/ files are missing that entry, write it now.\n\nSTEP 6: Check memory for any reminders with today's date \u2192 message user if found.\n\nDEFAULT: If nothing specific to say but you haven't talked in 3+ hours and it's daytime \u2192 a casual check-in is fine. \"hey, how's it going\" is better than silence. You're a person, not a monitoring system.\n\nONLY return HEARTBEAT_OK when: it's late night, or 2+ messages unanswered, or you just talked recently (within 1-2 hours)."
+      }
+    }
+  },
+  "commands": {
+    "native": "auto",
+    "nativeSkills": "auto",
+    "restart": true,
+    "ownerDisplay": "raw"
+  },
+  "session": {
+    "dmScope": "per-peer",
+    "reset": {
+      "mode": "daily",
+      "atHour": 4
+    }
+  },
+  "hooks": {
+    "internal": {
+      "enabled": true,
+      "entries": {
+        "user-bootstrap": {
+          "enabled": true
+        },
+        "telegram-linker": {
+          "enabled": true
+        }
+      },
+      "load": {
+        "extraDirs": [
+          "/root/.openclaw-companion/hooks"
+        ]
+      }
+    }
+  },
+  "channels": {
+    "telegram": {
+      "enabled": true,
+      "dmPolicy": "open",
+      "groupPolicy": "allowlist",
+      "streaming": "off",
+      "accounts": {
+        "default": {
+          "dmPolicy": "open",
+          "botToken": "${TELEGRAM_BOT_TOKEN}",
+          "allowFrom": [
+            "*"
+          ],
+          "groupPolicy": "allowlist",
+          "streaming": "off"
+        }
+      },
+      "allowFrom": [
+        "*"
+      ]
+    },
+    "whatsapp-cloud": {
+      "enabled": true,
+      "dmPolicy": "open",
+      "allowFrom": [
+        "*"
+      ],
+      "accounts": {
+        "default": {
+          "phoneNumberId": "${WHATSAPP_PHONE_NUMBER_ID}",
+          "accessToken": "${WHATSAPP_ACCESS_TOKEN}",
+          "appSecret": "${WHATSAPP_APP_SECRET}",
+          "verifyToken": "${WHATSAPP_VERIFY_TOKEN}",
+          "dmPolicy": "open",
+          "allowFrom": [
+            "*"
+          ],
+          "healthMonitor": {
+            "enabled": false
+          }
+        }
+      },
+      "healthMonitor": {
+        "enabled": false
+      },
+      "phoneNumberId": "${WHATSAPP_PHONE_NUMBER_ID}",
+      "accessToken": "${WHATSAPP_ACCESS_TOKEN}",
+      "appSecret": "${WHATSAPP_APP_SECRET}",
+      "verifyToken": "${WHATSAPP_VERIFY_TOKEN}"
+    },
+    "openclaw-weixin": {
+      "enabled": true,
+      "dmPolicy": "open",
+      "allowFrom": [
+        "*"
+      ]
+    }
+  },
+  "gateway": {
+    "mode": "local",
+    "bind": "lan",
+    "controlUi": {
+      "allowedOrigins": [
+        "http://localhost:18789",
+        "http://127.0.0.1:18789"
+      ],
+      "allowInsecureAuth": true,
+      "dangerouslyDisableDeviceAuth": true,
+      "dangerouslyAllowHostHeaderOriginFallback": true
+    },
+    "auth": {
+      "mode": "token",
+      "token": "6575ce5cd30fea3e940451607487dc5a7d49073c2fe0d053"
+    }
+  },
+  "plugins": {
+    "allow": [
+      "auth-gate",
+      "companion-food",
+      "companion-nutrient-calculator",
+      "companion-mood-detector",
+      "companion-schedule-learner",
+      "companion-blood-work-parser",
+      "companion-interaction-checker",
+      "companion-search-enforcer",
+      "companion-auto-memory",
+      "rule-injector",
+      "telegram",
+      "anthropic",
+      "openai",
+      "tavily",
+      "google",
+      "memory-core",
+      "elevenlabs",
+      "openclaw-whatsapp-cloud-api",
+      "openclaw-weixin"
+    ],
+    "load": {
+      "paths": [
+        "/root/.openclaw-companion/extensions/auth-gate",
+        "/root/.openclaw-companion/extensions/companion-food",
+        "/root/.openclaw-companion/extensions/companion-nutrient-calculator",
+        "/root/.openclaw-companion/extensions/companion-mood-detector",
+        "/root/.openclaw-companion/extensions/companion-schedule-learner",
+        "/root/.openclaw-companion/extensions/companion-blood-work-parser",
+        "/root/.openclaw-companion/extensions/companion-interaction-checker",
+        "/root/.openclaw-companion/extensions/companion-search-enforcer",
+        "/root/.openclaw-companion/extensions/companion-auto-memory",
+        "/root/.openclaw-companion/extensions/rule-injector",
+        "/root/.openclaw-companion/extensions/openclaw-whatsapp-cloud-api",
+        "/usr/local/lib/node_modules/@tencent-weixin/openclaw-weixin"
+      ]
+    },
+    "entries": {
+      "auth-gate": {
+        "enabled": true
+      },
+      "companion-food": {
+        "enabled": true
+      },
+      "companion-nutrient-calculator": {
+        "enabled": true
+      },
+      "companion-mood-detector": {
+        "enabled": true
+      },
+      "companion-schedule-learner": {
+        "enabled": true
+      },
+      "companion-blood-work-parser": {
+        "enabled": true
+      },
+      "companion-interaction-checker": {
+        "enabled": true
+      },
+      "companion-search-enforcer": {
+        "enabled": true
+      },
+      "companion-auto-memory": {
+        "enabled": true
+      },
+      "rule-injector": {
+        "enabled": true
+      },
+      "telegram": {
+        "enabled": true
+      },
+      "anthropic": {
+        "enabled": true
+      },
+      "openai": {
+        "enabled": true
+      },
+      "tavily": {
+        "enabled": true
+      },
+      "google": {
+        "enabled": true
+      },
+      "openclaw-weixin": {
+        "enabled": true
+      }
+    }
+  },
+  "env": {},
+  "tools": {
+    "web": {
+      "search": {
+        "provider": "tavily"
+      }
+    }
+  },
+  "meta": {
+    "lastTouchedVersion": "2026.3.24",
+    "lastTouchedAt": "2026-03-28T12:00:00.000Z"
+  },
+  "wizard": {
+    "lastRunAt": "2026-03-28T12:00:00.000Z",
+    "lastRunVersion": "2026.3.24",
+    "lastRunCommand": "doctor",
+    "lastRunMode": "local"
+  }
+}
