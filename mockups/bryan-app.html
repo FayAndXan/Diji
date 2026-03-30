@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap');
+  
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  :root {
+    --bg: #E8EDF5;
+    --card-bg: #E8EDF5;
+    --shadow-light: #FAFBFF;
+    --shadow-dark: rgba(22, 27, 29, 0.18);
+    --text-primary: #2C3E50;
+    --text-secondary: #6E7F8D;
+    --text-muted: #9EAAB4;
+    --accent-start: #B3D9E6;
+    --accent-mid: #418091;
+    --accent-end: #00172D;
+    --gradient: linear-gradient(135deg, #DAEFF6 0%, #B3D9E6 30%, #418091 70%, #00172D 100%);
+    --gradient-soft: linear-gradient(135deg, #DAEFF6 0%, #B3D9E6 50%, #7AAFBF 100%);
+    --gradient-btn: linear-gradient(135deg, #418091 0%, #00172D 100%);
+  }
+  
+  body {
+    font-family: 'DM Sans', -apple-system, sans-serif;
+    background: #1a1a2e;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 40px;
+    padding: 40px;
+    justify-content: center;
+  }
+  
+  .screen-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+  
+  .screen-label {
+    color: #aaa;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  
+  .phone {
+    width: 375px;
+    height: 812px;
+    background: var(--bg);
+    border-radius: 40px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 
+      20px 20px 60px rgba(0,0,0,0.3),
+      -5px -5px 20px rgba(255,255,255,0.05);
+  }
+  
+  .status-bar {
+    height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 30px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  
+  .status-icons {
+    display: flex;
+    gap: 5px;
+    font-size: 12px;
+  }
+  
+  /* Neumorphic helpers */
+  .neu-raised {
+    background: var(--card-bg);
+    border-radius: 20px;
+    box-shadow: 
+      8px 8px 16px var(--shadow-dark),
+      -8px -8px 16px var(--shadow-light);
+  }
+  
+  .neu-inset {
+    background: var(--card-bg);
+    border-radius: 16px;
+    box-shadow: 
+      inset 4px 4px 8px var(--shadow-dark),
+      inset -4px -4px 8px var(--shadow-light);
+  }
+  
+  .neu-btn {
+    background: var(--gradient-btn);
+    border: none;
+    border-radius: 16px;
+    color: white;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 17px;
+    font-weight: 600;
+    padding: 18px 32px;
+    width: 100%;
+    cursor: pointer;
+    box-shadow: 
+      6px 6px 12px var(--shadow-dark),
+      -3px -3px 8px var(--shadow-light);
+    letter-spacing: 0.3px;
+  }
+  
+  .neu-btn-soft {
+    background: var(--gradient-soft);
+    border: none;
+    border-radius: 16px;
+    color: var(--text-primary);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px;
+    font-weight: 500;
+    padding: 16px 24px;
+    width: 100%;
+    cursor: pointer;
+    box-shadow: 
+      6px 6px 12px var(--shadow-dark),
+      -3px -3px 8px var(--shadow-light);
+  }
+  
+  /* ===== SCREEN 1: WELCOME ===== */
+  .welcome-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: calc(100% - 54px);
+    padding: 40px 30px;
+    text-align: center;
+  }
+  
+  .welcome-orb {
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    background: var(--gradient);
+    margin-bottom: 40px;
+    box-shadow: 
+      12px 12px 24px var(--shadow-dark),
+      -8px -8px 20px var(--shadow-light),
+      inset -4px -4px 12px rgba(65, 128, 145, 0.3);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .welcome-orb::after {
+    content: '';
+    position: absolute;
+    top: 15%;
+    left: 20%;
+    width: 40%;
+    height: 30%;
+    background: radial-gradient(ellipse, rgba(255,255,255,0.25), transparent);
+    border-radius: 50%;
+  }
+  
+  .welcome-title {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+    letter-spacing: -0.5px;
+  }
+  
+  .welcome-sub {
+    font-size: 16px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 60px;
+    max-width: 280px;
+  }
+  
+  .welcome-buttons {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  
+  .ghost-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px;
+    font-weight: 500;
+    padding: 16px;
+    cursor: pointer;
+  }
+  
+  /* ===== SCREEN 2: EMAIL ===== */
+  .email-content {
+    padding: 30px;
+    height: calc(100% - 54px);
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .screen-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    margin-top: 20px;
+  }
+  
+  .screen-desc {
+    font-size: 15px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 40px;
+  }
+  
+  .input-group {
+    margin-bottom: 24px;
+  }
+  
+  .input-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+    display: block;
+  }
+  
+  .neu-input {
+    width: 100%;
+    padding: 18px 20px;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px;
+    color: var(--text-primary);
+    background: var(--card-bg);
+    border-radius: 16px;
+    box-shadow: 
+      inset 4px 4px 8px var(--shadow-dark),
+      inset -4px -4px 8px var(--shadow-light);
+    outline: none;
+  }
+  
+  .neu-input::placeholder {
+    color: var(--text-muted);
+  }
+  
+  .email-spacer { flex: 1; }
+  
+  /* ===== SCREEN 3: CHANNEL SELECT ===== */
+  .channel-content {
+    padding: 30px;
+    height: calc(100% - 54px);
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .channel-options {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+  
+  .channel-card {
+    padding: 22px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .channel-card.selected {
+    background: linear-gradient(135deg, #DAEFF6 0%, #E8EDF5 100%);
+    box-shadow: 
+      inset 4px 4px 8px var(--shadow-dark),
+      inset -4px -4px 8px var(--shadow-light);
+  }
+  
+  .channel-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+  
+  .channel-icon.tg { background: linear-gradient(135deg, #2AABEE, #229ED9); color: white; }
+  .channel-icon.wa { background: linear-gradient(135deg, #25D366, #128C7E); color: white; }
+  .channel-icon.app { background: var(--gradient-btn); color: white; }
+  
+  .channel-info h3 {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 3px;
+  }
+  
+  .channel-info p {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  
+  .channel-check {
+    margin-left: auto;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+  
+  .channel-check.on {
+    background: var(--gradient-btn);
+    color: white;
+  }
+  
+  .channel-check.off {
+    box-shadow: inset 2px 2px 4px var(--shadow-dark), inset -2px -2px 4px var(--shadow-light);
+  }
+  
+  /* ===== SCREEN 4: GOALS ===== */
+  .goals-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 30px;
+  }
+  
+  .goal-chip {
+    padding: 20px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .goal-chip .emoji {
+    font-size: 28px;
+    margin-bottom: 8px;
+    display: block;
+  }
+  
+  .goal-chip .label {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+  
+  .goal-chip.selected {
+    background: linear-gradient(135deg, #DAEFF6 0%, #E8EDF5 100%);
+    box-shadow: 
+      inset 4px 4px 8px var(--shadow-dark),
+      inset -4px -4px 8px var(--shadow-light);
+  }
+  
+  .goal-chip.selected .label {
+    color: var(--accent-mid);
+    font-weight: 600;
+  }
+  
+  /* ===== SCREEN 5: HOME ===== */
+  .home-content {
+    padding: 20px 24px;
+    height: calc(100% - 54px);
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .home-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+  
+  .home-greeting {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+  
+  .home-greeting span {
+    display: block;
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--text-secondary);
+    margin-top: 2px;
+  }
+  
+  .home-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: var(--gradient);
+    box-shadow: 4px 4px 8px var(--shadow-dark), -2px -2px 6px var(--shadow-light);
+  }
+  
+  .stats-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  
+  .stat-card {
+    padding: 18px 14px;
+    text-align: center;
+  }
+  
+  .stat-card .value {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+  
+  .stat-card .unit {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    display: block;
+  }
+  
+  .stat-card .stat-label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 6px;
+  }
+  
+  .bryan-card {
+    padding: 24px;
+    margin-bottom: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .bryan-card::before {
+    content: '';
+    position: absolute;
+    top: -20px;
+    right: -20px;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: var(--gradient-soft);
+    opacity: 0.3;
+  }
+  
+  .bryan-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+  }
+  
+  .bryan-msg {
+    font-size: 16px;
+    color: var(--text-primary);
+    line-height: 1.5;
+    margin-bottom: 14px;
+    position: relative;
+  }
+  
+  .bryan-action {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent-mid);
+    cursor: pointer;
+    position: relative;
+  }
+  
+  .quick-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  
+  .quick-card {
+    padding: 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+  }
+  
+  .quick-card .qicon {
+    font-size: 20px;
+  }
+  
+  .quick-card .qlabel {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+  
+  /* ===== SCREEN 6: SETTINGS ===== */
+  .settings-content {
+    padding: 20px 24px;
+    height: calc(100% - 54px);
+    overflow-y: auto;
+  }
+  
+  .settings-header {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 24px;
+    margin-top: 10px;
+  }
+  
+  .settings-section {
+    margin-bottom: 24px;
+  }
+  
+  .settings-section-title {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    padding-left: 4px;
+  }
+  
+  .settings-group {
+    padding: 4px;
+  }
+  
+  .setting-row {
+    display: flex;
+    align-items: center;
+    padding: 16px 18px;
+    gap: 14px;
+  }
+  
+  .setting-row:not(:last-child) {
+    border-bottom: 1px solid rgba(110, 127, 141, 0.08);
+  }
+  
+  .setting-icon {
+    font-size: 20px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: var(--gradient-soft);
+    flex-shrink: 0;
+  }
+  
+  .setting-label {
+    font-size: 16px;
+    color: var(--text-primary);
+    font-weight: 500;
+    flex: 1;
+  }
+  
+  .setting-value {
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+  
+  .setting-arrow {
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+  
+  .toggle-track {
+    width: 50px;
+    height: 28px;
+    border-radius: 14px;
+    position: relative;
+    cursor: pointer;
+  }
+  
+  .toggle-track.on {
+    background: var(--gradient-btn);
+  }
+  
+  .toggle-track.off {
+    box-shadow: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light);
+  }
+  
+  .toggle-knob {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: white;
+    position: absolute;
+    top: 3px;
+    box-shadow: 2px 2px 4px rgba(0,0,0,0.15);
+    transition: left 0.2s;
+  }
+  
+  .toggle-track.on .toggle-knob { left: 25px; }
+  .toggle-track.off .toggle-knob { left: 3px; }
+  
+  /* Tab bar */
+  .tab-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 80px;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 0 20px 16px;
+    box-shadow: 0 -4px 12px var(--shadow-dark);
+  }
+  
+  .tab-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    font-size: 20px;
+    cursor: pointer;
+  }
+  
+  .tab-item .tab-label {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  
+  .tab-item.active .tab-label {
+    color: var(--accent-mid);
+    font-weight: 600;
+  }
+  
+  /* Nav bar back */
+  .nav-back {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 24px;
+    color: var(--accent-mid);
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  
+  .progress-bar {
+    height: 4px;
+    background: rgba(110, 127, 141, 0.1);
+    border-radius: 2px;
+    margin: 0 30px 0;
+    overflow: hidden;
+  }
+  
+  .progress-fill {
+    height: 100%;
+    background: var(--gradient);
+    border-radius: 2px;
+    transition: width 0.3s;
+  }
+</style>
+</head>
+<body>
+
+<!-- SCREEN 1: WELCOME -->
+<div class="screen-wrapper">
+  <div class="screen-label">Welcome</div>
+  <div class="phone">
+    <div class="status-bar">
+      <span>9:41</span>
+      <div class="status-icons">📶 📡 🔋</div>
+    </div>
+    <div class="welcome-content">
+      <div class="welcome-orb"></div>
+      <div class="welcome-title">Meet Bryan</div>
+      <div class="welcome-sub">Your health companion built for longevity. Personal, private, always learning.</div>
+      <div class="welcome-buttons">
+        <button class="neu-btn">Get Started</button>
+        <button class="ghost-btn">I already have an account</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 2: EMAIL -->
+<div class="screen-wrapper">
+  <div class="screen-label">Sign Up</div>
+  <div class="phone">
+    <div class="status-bar">
+      <span>9:41</span>
+      <div class="status-icons">📶 📡 🔋</div>
+    </div>
+    <div class="nav-back">← Back</div>
+    <div class="progress-bar"><div class="progress-fill" style="width: 25%"></div></div>
+    <div class="email-content">
+      <div class="screen-title">What's your email?</div>
+      <div class="screen-desc">We'll send you a magic link. No passwords, no friction.</div>
+      <div class="input-group">
+        <label class="input-label">Email</label>
+        <input class="neu-input" type="email" placeholder="you@example.com" value="fay@example.com">
+      </div>
+      <div class="email-spacer"></div>
+      <button class="neu-btn">Send Magic Link ✨</button>
+      <div style="height: 40px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 3: CHANNEL SELECT -->
+<div class="screen-wrapper">
+  <div class="screen-label">Channel</div>
+  <div class="phone">
+    <div class="status-bar">
+      <span>9:41</span>
+      <div class="status-icons">📶 📡 🔋</div>
+    </div>
+    <div class="nav-back">← Back</div>
+    <div class="progress-bar"><div class="progress-fill" style="width: 50%"></div></div>
+    <div class="channel-content">
+      <div class="screen-title">How should Bryan reach you?</div>
+      <div class="screen-desc">Pick your main channel. You can always switch later.</div>
+      <div class="channel-options">
+        <div class="channel-card neu-raised selected">
+          <div class="channel-icon tg">✈️</div>
+          <div class="channel-info">
+            <h3>Telegram</h3>
+            <p>Best experience. Rich features.</p>
+          </div>
+          <div class="channel-check on">✓</div>
+        </div>
+        <div class="channel-card neu-raised">
+          <div class="channel-icon wa">📱</div>
+          <div class="channel-info">
+            <h3>WhatsApp</h3>
+            <p>Simple and familiar.</p>
+          </div>
+          <div class="channel-check off"></div>
+        </div>
+        <div class="channel-card neu-raised">
+          <div class="channel-icon app">💬</div>
+          <div class="channel-info">
+            <h3>App Only</h3>
+            <p>Chat right here in the app.</p>
+          </div>
+          <div class="channel-check off"></div>
+        </div>
+      </div>
+      <div style="flex:1"></div>
+      <button class="neu-btn">Continue</button>
+      <div style="height: 40px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 4: GOALS -->
+<div class="screen-wrapper">
+  <div class="screen-label">Goals</div>
+  <div class="phone">
+    <div class="status-bar">
+      <span>9:41</span>
+      <div class="status-icons">📶 📡 🔋</div>
+    </div>
+    <div class="nav-back">← Back</div>
+    <div class="progress-bar"><div class="progress-fill" style="width: 75%"></div></div>
+    <div class="channel-content">
+      <div class="screen-title">What matters to you?</div>
+      <div class="screen-desc">Bryan will focus on these. Pick as many as you want.</div>
+      <div class="goals-grid">
+        <div class="goal-chip neu-raised selected">
+          <span class="emoji">🏋️</span>
+          <span class="label">Fitness</span>
+        </div>
+        <div class="goal-chip neu-raised">
+          <span class="emoji">🥗</span>
+          <span class="label">Nutrition</span>
+        </div>
+        <div class="goal-chip neu-raised selected">
+          <span class="emoji">😴</span>
+          <span class="label">Sleep</span>
+        </div>
+        <div class="goal-chip neu-raised">
+          <span class="emoji">💊</span>
+          <span class="label">Supplements</span>
+        </div>
+        <div class="goal-chip neu-raised">
+          <span class="emoji">🩸</span>
+          <span class="label">Blood Work</span>
+        </div>
+        <div class="goal-chip neu-raised">
+          <span class="emoji">🧘</span>
+          <span class="label">Stress</span>
+        </div>
+        <div class="goal-chip neu-raised">
+          <span class="emoji">⏳</span>
+          <span class="label">Longevity</span>
+        </div>
+        <div class="goal-chip neu-raised">
+          <span class="emoji">📊</span>
+          <span class="label">Lab Tracking</span>
+        </div>
+      </div>
+      <div style="flex:1"></div>
+      <button class="neu-btn">Almost There</button>
+      <div style="height: 40px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 5: HOME -->
+<div class="screen-wrapper">
+  <div class="screen-label">Home</div>
+  <div class="phone">
+    <div class="status-bar">
+      <span>9:41</span>
+      <div class="status-icons">📶 📡 🔋</div>
+    </div>
+    <div class="home-content">
+      <div class="home-header">
+        <div class="home-greeting">
+          Hey Fay
+          <span>Sunday morning</span>
+        </div>
+        <div class="home-avatar"></div>
+      </div>
+      
+      <div class="stats-row">
+        <div class="stat-card neu-raised">
+          <div class="value">7.2</div>
+          <div class="unit">hrs</div>
+          <div class="stat-label">Sleep</div>
+        </div>
+        <div class="stat-card neu-raised">
+          <div class="value">8,421</div>
+          <div class="unit">steps</div>
+          <div class="stat-label">Steps</div>
+        </div>
+        <div class="stat-card neu-raised">
+          <div class="value">62</div>
+          <div class="unit">bpm</div>
+          <div class="stat-label">RHR</div>
+        </div>
+      </div>
+      
+      <div class="bryan-card neu-raised">
+        <div class="bryan-label">Bryan says</div>
+        <div class="bryan-msg">Your sleep quality dropped this week. That late screen time pattern isn't helping. Want me to set up an evening routine?</div>
+        <div class="bryan-action">Let's do it →</div>
+      </div>
+      
+      <div class="quick-actions">
+        <div class="quick-card neu-raised">
+          <span class="qicon">📸</span>
+          <span class="qlabel">Log Meal</span>
+        </div>
+        <div class="quick-card neu-raised">
+          <span class="qicon">💊</span>
+          <span class="qlabel">Supplements</span>
+        </div>
+        <div class="quick-card neu-raised">
+          <span class="qicon">🏋️</span>
+          <span class="qlabel">Workout</span>
+        </div>
+        <div class="quick-card neu-raised">
+          <span class="qicon">🩸</span>
+          <span class="qlabel">Blood Work</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="tab-bar">
+      <div class="tab-item active">
+        <span>🏠</span>
+        <span class="tab-label">Home</span>
+      </div>
+      <div class="tab-item">
+        <span>💬</span>
+        <span class="tab-label">Chat</span>
+      </div>
+      <div class="tab-item">
+        <span>📊</span>
+        <span class="tab-label">Insights</span>
+      </div>
+      <div class="tab-item">
+        <span>⚙️</span>
+        <span class="tab-label">Settings</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 6: SETTINGS -->
+<div class="screen-wrapper">
+  <div class="screen-label">Settings</div>
+  <div class="phone">
+    <div class="status-bar">
+      <span>9:41</span>
+      <div class="status-icons">📶 📡 🔋</div>
+    </div>
+    <div class="settings-content">
+      <div class="settings-header">Settings</div>
+      
+      <div class="settings-section">
+        <div class="settings-section-title">Profile</div>
+        <div class="settings-group neu-raised">
+          <div class="setting-row">
+            <div class="setting-icon">👤</div>
+            <div class="setting-label">Name</div>
+            <div class="setting-value">Fay</div>
+            <div class="setting-arrow">›</div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-icon">✉️</div>
+            <div class="setting-label">Email</div>
+            <div class="setting-value">fay@...</div>
+            <div class="setting-arrow">›</div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-icon">📱</div>
+            <div class="setting-label">Channel</div>
+            <div class="setting-value">Telegram</div>
+            <div class="setting-arrow">›</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="settings-section">
+        <div class="settings-section-title">Health</div>
+        <div class="settings-group neu-raised">
+          <div class="setting-row">
+            <div class="setting-icon">❤️</div>
+            <div class="setting-label">HealthKit</div>
+            <div class="toggle-track on"><div class="toggle-knob"></div></div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-icon">🎯</div>
+            <div class="setting-label">Goals</div>
+            <div class="setting-value">4 active</div>
+            <div class="setting-arrow">›</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="settings-section">
+        <div class="settings-section-title">Bryan</div>
+        <div class="settings-group neu-raised">
+          <div class="setting-row">
+            <div class="setting-icon">🔔</div>
+            <div class="setting-label">Check-ins</div>
+            <div class="toggle-track on"><div class="toggle-knob"></div></div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-icon">🌙</div>
+            <div class="setting-label">Quiet Hours</div>
+            <div class="setting-value">11pm–7am</div>
+            <div class="setting-arrow">›</div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-icon">🗣️</div>
+            <div class="setting-label">Communication</div>
+            <div class="setting-value">Casual</div>
+            <div class="setting-arrow">›</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="tab-bar">
+      <div class="tab-item">
+        <span>🏠</span>
+        <span class="tab-label">Home</span>
+      </div>
+      <div class="tab-item">
+        <span>💬</span>
+        <span class="tab-label">Chat</span>
+      </div>
+      <div class="tab-item">
+        <span>📊</span>
+        <span class="tab-label">Insights</span>
+      </div>
+      <div class="tab-item active">
+        <span>⚙️</span>
+        <span class="tab-label">Settings</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

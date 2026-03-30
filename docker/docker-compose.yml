@@ -60,6 +60,7 @@ services:
       - REDIS_URL=redis://redis:6379
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
       - SUPERMEMORY_API_KEY=${SUPERMEMORY_API_KEY}
       - SUPERMEMORY_BASE_URL=${SUPERMEMORY_BASE_URL:-https://api.supermemory.ai/v3}
       - MEMORY_INGEST_URL=${SUPERMEMORY_BASE_URL:-https://api.supermemory.ai/v3}/memories
