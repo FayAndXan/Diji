@@ -60,6 +60,8 @@ jobs:
             const missing = paths.filter(p => {
               // Skip system-level plugins (installed globally in Docker, not in repo)
               if (p.startsWith('/usr/') || p.includes('node_modules/')) return false;
+              // Skip paths with env variables (resolved at runtime)
+              if (p.includes('${')) return false;
               const local = p.replace('/root/.openclaw-companion/extensions/', 'extensions/');
               return !fs.existsSync(local);
             });
