@@ -58,7 +58,8 @@ jobs:
             const cfg = JSON.parse(fs.readFileSync('templates/openclaw.json','utf-8'));
             const paths = (cfg.plugins?.load?.paths || []);
             const missing = paths.filter(p => {
-              // Resolve relative to repo for CI
+              // Skip system-level plugins (installed globally in Docker, not in repo)
+              if (p.startsWith('/usr/') || p.includes('node_modules/')) return false;
               const local = p.replace('/root/.openclaw-companion/extensions/', 'extensions/');
               return !fs.existsSync(local);
             });
