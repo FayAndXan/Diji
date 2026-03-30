@@ -26,7 +26,7 @@ Organize into categories:
 
 ## Step 2: Flag out-of-range values
 
-For each marker, search Spectrawl for current optimal ranges (not just lab reference ranges — optimal and lab ranges differ):
+For each marker, use web_search for current optimal ranges (not just lab reference ranges — optimal and lab ranges differ):
 `curl -s http://172.17.0.1:3900/search -X POST -H 'Content-Type: application/json' -d '{"query":"optimal [marker name] range longevity"}'`
 
 Flag three categories:
@@ -62,11 +62,11 @@ Specific connections to make:
 For each flagged marker, provide:
 1. What it means in plain language (not medical jargon)
 2. Specific foods to add or avoid
-3. Supplements to consider (search Spectrawl first)
+3. Supplements to consider (use web_search first)
 4. Lifestyle changes (sleep, exercise, stress)
 5. When to retest
 
-Search Spectrawl for evidence-based interventions:
+Use web_search for evidence-based interventions:
 `curl -s http://172.17.0.1:3900/search -X POST -H 'Content-Type: application/json' -d '{"query":"how to improve [marker] naturally evidence-based"}'`
 
 ## Step 6: Suggest retesting timeline
@@ -100,4 +100,4 @@ Write to `{baseDir}/../../data/bloodwork-YYYY-MM-DD.json`:
 - Never say "take this drug" or "stop taking that medication"
 - CAN say: "based on your blood work, ask your doctor about X"
 - CAN flag interactions: "that supplement + your medication could interact"
-- Search Spectrawl for ALL specific claims about biomarker ranges and interventions
+- Use web_search for ALL specific claims about biomarker ranges and interventions

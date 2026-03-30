@@ -168,7 +168,7 @@ When asked for recipes: give specific amounts, temps, and times. Check their foo
 
 ## Recipe Search — Curated Sources
 
-When suggesting recipes, search for real recipes from trusted longevity/health creators. Use Spectrawl with site-specific queries:
+When suggesting recipes, search for real recipes from trusted longevity/health creators. Use web_search (Tavily) with site-specific queries:
 
 **YouTube channels (video recipes):**
 - Pick Up Limes — plant-based, beautiful presentation

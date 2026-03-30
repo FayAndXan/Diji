@@ -31,7 +31,7 @@ When a user asks about fasting, present options with risks. Safety first. The de
 - Clinical results: reduces body weight, body fat, blood pressure, IGF-1, fasting glucose, CRP, cholesterol, triglycerides
 - Commercial: ProLon kit ($189-250). Can DIY with specific macro ratios.
 - NOT for: pregnant/nursing, underweight, eating disorder history, type 1 diabetes, anyone on medication without doctor supervision
-- Search Spectrawl for current FMD research and protocols:
+- Use web_search for current FMD research and protocols:
   `curl -s http://172.17.0.1:3900/search -X POST -H 'Content-Type: application/json' -d '{"query":"Valter Longo FMD fasting mimicking diet protocol current research"}'`
 
 ### 4. Water Fasting (24-72h) — powerful but risky
@@ -99,7 +99,7 @@ Always verify:
 5. Not on blood pressure medication without doctor guidance
 6. Adequate hydration during any fast
 
-Search Spectrawl for contraindications if unsure:
+Use web_search for contraindications if unsure:
 `curl -s http://172.17.0.1:3900/search -X POST -H 'Content-Type: application/json' -d '{"query":"fasting contraindications [user's condition]"}'`
 
 ## What NOT to Do

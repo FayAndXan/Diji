@@ -95,7 +95,7 @@ Always include these per Blueprint/Attia recommendations:
 
 **Flexibility/Mobility:** Hip 90/90, thoracic spine rotations, ankle mobility. 5-10 min daily.
 
-Search Spectrawl for current evidence if user asks about specific protocols:
+Use web_search for current evidence if user asks about specific protocols:
 `curl -s http://172.17.0.1:3900/search -X POST -H 'Content-Type: application/json' -d '{"query":"..."}'`
 
 ## Step 5: Program the session

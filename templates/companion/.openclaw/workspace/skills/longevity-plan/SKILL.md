@@ -32,7 +32,7 @@ Based on their actual sleep data:
   - Inconsistent schedule? → "pick [time] and stick to it, even weekends"
   - Poor quality? → Temperature, light, supplement recommendations
 - Supplements for sleep if needed (magnesium glycinate 200-400mg, etc.)
-- Search Spectrawl for any sleep protocol specifics:
+- Use web_search for any sleep protocol specifics:
   `curl -s http://172.17.0.1:3900/search -X POST -H 'Content-Type: application/json' -d '{"query":"Bryan Johnson Blueprint sleep protocol"}'`
 
 ### 2. Nutrition Targets
@@ -62,7 +62,7 @@ Based on their availability and recovery data:
 - **Recovery days** based on HRV/sleep patterns
 - **Deload schedule:** Every 4-6 weeks
 
-Search Spectrawl for current Blueprint exercise protocol:
+Use web_search for current Blueprint exercise protocol:
 `curl -s http://172.17.0.1:3900/search -X POST -H 'Content-Type: application/json' -d '{"query":"Bryan Johnson Blueprint exercise routine current"}'`
 
 ### 4. Supplement Stack
@@ -75,14 +75,14 @@ Review their current stack from data/supplements-stack.json:
 - Exact timing for each supplement
 - Interactions to watch for
 
-Search Spectrawl for current Blueprint supplement stack:
+Use web_search for current Blueprint supplement stack:
 `curl -s http://172.17.0.1:3900/search -X POST -H 'Content-Type: application/json' -d '{"query":"Bryan Johnson Blueprint supplement stack 2026"}'`
 
 ### 5. Biomarkers to Track
 
 Based on their blood work:
 - Which markers to retest and when
-- Target ranges for their specific flags (search Spectrawl for optimal ranges)
+- Target ranges for their specific flags (use web_search for optimal ranges)
 - What improvements to expect and timeline
 - New markers to add if not previously tested (ApoB, hsCRP, insulin, HbA1c)
 

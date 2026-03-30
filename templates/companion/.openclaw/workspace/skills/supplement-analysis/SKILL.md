@@ -10,7 +10,7 @@ When a user mentions a supplement, vitamin, mineral, sends a supplement photo, a
 ## Step 1: Find EVERYTHING about the supplement
 
 - If user sends a photo: identify the product name and brand from the label
-- ALWAYS search Spectrawl for the exact product:
+- ALWAYS use web_search for the exact product:
   `curl -s http://172.17.0.1:3900/search -X POST -H 'Content-Type: application/json' -d '{"query":"[product name] supplement ingredients nutritional facts"}'`
 - Pull the complete nutritional facts: every active ingredient with exact dose and % DV
 - List every inactive/other ingredient (fillers, binders, coatings)
@@ -32,7 +32,7 @@ Check EVERY ingredient against their blood markers:
 - High LDL → flag anything that worsens lipids
 - High WBC → flag anything affecting immune response
 - Low vitamin D → confirm D3 dose is adequate
-- Search Spectrawl for any ingredient-blood marker interactions you're unsure about:
+- Use web_search for any ingredient-blood marker interactions you're unsure about:
   `curl -s http://172.17.0.1:3900/search -X POST -H 'Content-Type: application/json' -d '{"query":"[ingredient] effect on [blood marker]"}'`
 
 ## Step 4: Check supplement-to-supplement interactions
@@ -47,13 +47,13 @@ Key interactions to check:
 - Ashwagandha + anything sedating → flag for nighttime only
 - Blood thinners + omega-3/vitamin E/vitamin K → flag, suggest doctor consult
 - Thyroid meds + calcium/iron/magnesium → separate by 4 hours
-- Search Spectrawl for any interaction you're not certain about
+- Use web_search for any interaction you're not certain about
 
 ## Step 5: Compare against Blueprint protocol targets
 
 Compare the user's total daily intake (supplements + food logged in data/meals-*.json) against Blueprint recommended ranges.
 
-Search Spectrawl for current Blueprint protocol targets:
+Use web_search for current Blueprint protocol targets:
 `curl -s http://172.17.0.1:3900/search -X POST -H 'Content-Type: application/json' -d '{"query":"Bryan Johnson Blueprint supplement protocol current doses"}'`
 
 - Flag if OVER recommended daily intake for any nutrient
@@ -64,7 +64,7 @@ Search Spectrawl for current Blueprint protocol targets:
 
 For each supplement, give ONE verdict:
 - **KEEP** — good product, right dose, no issues
-- **REPLACE** — concept is right but product is bad (search Spectrawl for a better alternative)
+- **REPLACE** — concept is right but product is bad (use web_search for a better alternative)
 - **DROP** — not needed, redundant, or harmful given their profile
 - **ADJUST DOSE** — say exactly how (increase/decrease, new target)
 
@@ -115,6 +115,6 @@ When discussing tier, be honest: "pretty solid evidence" / "depends on your situ
 - Don't skip the nutritional facts panel
 - Don't ignore fillers
 - Don't forget to cross-reference with blood work
-- Don't recommend supplements without searching Spectrawl first
+- Don't recommend supplements without searching web_search (Tavily) first
 - Never push supplements. User asks, you inform.
 - Always mention "check with your doctor" for anything beyond basic vitamins

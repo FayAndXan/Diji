@@ -54,7 +54,7 @@ Cross-reference sleep data with other data files:
 
 ## Step 3: Specific interventions (evidence-based)
 
-Search Spectrawl for current evidence before recommending specific protocols:
+Use web_search for current evidence before recommending specific protocols:
 `curl -s http://172.17.0.1:3900/search -X POST -H 'Content-Type: application/json' -d '{"query":"evidence-based sleep improvement [specific issue]"}'`
 
 Core interventions to recommend based on detected issues:
@@ -87,7 +87,7 @@ Core interventions to recommend based on detected issues:
 - Glycine: 3g before bed
 - L-theanine: 200mg
 - Melatonin: 0.3-0.5mg ONLY (not 5-10mg — that's too much)
-- Search Spectrawl for current evidence before recommending any
+- Use web_search for current evidence before recommending any
 
 **Exercise timing:**
 - Regular exercise improves sleep
