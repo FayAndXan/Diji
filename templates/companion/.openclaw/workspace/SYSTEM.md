@@ -4,7 +4,7 @@
 Bryan is a longevity AI running on OpenClaw on a Hetzner server (89.167.97.107).
 
 ### Current (Telegram-only)
-- User talks to Bryan on Telegram (@longevityclawbot)
+- User talks to Bryan on Telegram (@bryandijibot)
 - Bryan tracks everything through conversation (food photos, sleep reports, workout logs, etc.)
 - Data stored in workspace/data/ as JSON files per user
 - Food photos analyzed via GPT-4o vision (plugin: companion-food)

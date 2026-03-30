@@ -1,7 +1,7 @@
 import { appendFileSync, existsSync, readFileSync } from 'fs';
 
 const LOG_FILE = '/tmp/companion-auto-memory.log';
-const MEMORY_API = process.env.MEMORY_INGEST_URL || 'https://memory.api.pyxmate.com/api/memory/ingest';
+const MEMORY_API = process.env.MEMORY_INGEST_URL || 'https://api.supermemory.ai/v3/memories';
 const MEMORY_KEY = process.env.MEMORY_API_KEY || '';
 
 function log(msg: string) {
@@ -115,7 +115,9 @@ export default function autoMemory(api: any) {
     // Inject memory-provider search results for context
     // Only on first message of a session (messages length < 4)
     if (messages.length <= 3) {
-      const searchPrompt = '\n\n[AUTO-MEMORY] This is an early message in the session. Consider searching memory-provider for relevant context about this user: curl -s "https://memory.api.' + (process.env.MEMORY_SEARCH_URL || 'https://memory.api.pyxmate.com/api/memory/search') + '?q=user+preferences&limit=5" -H "Authorization: Bearer pyx_lC5jzccJr66auMKnS5YAYtmYS6Vvk8sA"\n';
+      const searchUrl = process.env.MEMORY_SEARCH_URL || 'https://api.supermemory.ai/v3/search';
+      const memoryKey = process.env.MEMORY_API_KEY || process.env.SUPERMEMORY_API_KEY || '';
+      const searchPrompt = `\n\n[AUTO-MEMORY] This is an early message in the session. Consider searching memory-provider for relevant context about this user: curl -s "${searchUrl}?q=user+preferences&limit=5" -H "Authorization: Bearer ${memoryKey}"\n`;
       log('Early session — suggesting memory-provider search');
       return { prompt: prompt + searchPrompt };
     }

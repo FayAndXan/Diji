@@ -2,7 +2,7 @@
   "id": "companion-auto-memory",
   "name": "Companion Auto Memory",
   "version": "1.0.0",
-  "description": "Automatically stores important facts to pyx-memory and verifies data file writes after health conversations",
+  "description": "Automatically stores important facts to memory provider (Supermemory) and verifies data file writes after health conversations",
   "entry": "index.ts",
   "configSchema": {
     "type": "object",
