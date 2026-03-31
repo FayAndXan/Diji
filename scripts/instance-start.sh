@@ -10,6 +10,8 @@ set -e
 INSTANCE_ID="${HOSTNAME:-$(cat /proc/sys/kernel/random/uuid | cut -d- -f1)}"
 ROUTER_URL="${ROUTER_URL:-http://router:4000}"
 GATEWAY_PORT="${GATEWAY_PORT:-18809}"
+WEBHOOK_PORT="${WEBHOOK_PORT:-18810}"
+COMPANION_NAME="${COMPANION_NAME:-bryan}"
 HOST_IP="${HOST_IP:-$(hostname -i)}"
 
 echo "[diji-instance] Starting instance ${INSTANCE_ID}"
@@ -19,14 +21,45 @@ echo "[diji-instance] Registering with router at ${ROUTER_URL}"
 # Register with router
 curl -s -X POST "${ROUTER_URL}/register" \
   -H "Content-Type: application/json" \
-  -d "{\"id\":\"${INSTANCE_ID}\",\"host\":\"${HOST_IP}\",\"port\":\"${GATEWAY_PORT}\"}" || true
+  -d "{\"companion\":\"${COMPANION_NAME}\",\"id\":\"${INSTANCE_ID}\",\"host\":\"${HOST_IP}\",\"port\":\"${WEBHOOK_PORT}\"}" || true
+echo "[diji-instance] Registered as ${COMPANION_NAME}/${INSTANCE_ID} at ${HOST_IP}:${WEBHOOK_PORT}"
 
 # Deregister on shutdown
 cleanup() {
   echo "[diji-instance] Deregistering instance ${INSTANCE_ID}"
   curl -s -X POST "${ROUTER_URL}/deregister" \
     -H "Content-Type: application/json" \
-    -d "{\"id\":\"${INSTANCE_ID}\"}" || true
+    -d "{\"companion\":\"${COMPANION_NAME}\",\"id\":\"${INSTANCE_ID}\"}" || true
+  
+  # Check if other instances of this companion are still running
+  # If yes, re-set the webhook (OC deletes it on shutdown)
+  REMAINING=$(curl -s "${ROUTER_URL}/stats" | python3 -c "
+import json, sys
+try:
+    d = json.load(sys.stdin)
+    comp = d.get('${COMPANION_NAME}', {})
+    print(len(comp.get('instances', [])))
+except: print(0)
+" 2>/dev/null)
+  
+  if [ "${REMAINING}" -gt "0" ] 2>/dev/null; then
+    echo "[diji-instance] Other instances still running, re-setting webhook"
+    WEBHOOK_SECRET=$(python3 -c "
+import json
+with open('/root/.openclaw-companion/openclaw.json') as f:
+    c = json.load(f)
+print(c.get('channels',{}).get('telegram',{}).get('webhookSecret',''))
+" 2>/dev/null)
+    WEBHOOK_URL=$(python3 -c "
+import json
+with open('/root/.openclaw-companion/openclaw.json') as f:
+    c = json.load(f)
+print(c.get('channels',{}).get('telegram',{}).get('webhookUrl',''))
+" 2>/dev/null)
+    if [ -n "${WEBHOOK_URL}" ] && [ -n "${WEBHOOK_SECRET}" ]; then
+      curl -s "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook?url=${WEBHOOK_URL}&secret_token=${WEBHOOK_SECRET}" || true
+    fi
+  fi
   exit 0
 }
 trap cleanup SIGTERM SIGINT
