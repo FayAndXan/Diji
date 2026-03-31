@@ -41,11 +41,7 @@
     "ownerDisplay": "raw"
   },
   "session": {
-    "dmScope": "per-channel-peer",
-    "reset": {
-      "mode": "daily",
-      "atHour": 4
-    }
+    "dmScope": "per-channel-peer"
   },
   "hooks": {
     "internal": {
