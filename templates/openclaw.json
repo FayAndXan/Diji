@@ -27,12 +27,39 @@
       "cron": {
         "memory-dream": {
           "every": "48h",
-          "prompt": "Memory consolidation time. This runs every 48 hours.\n\nPHASE 1 — ORIENTATION: Read all memory files (MEMORY.md + memory/*.md). Map what exists.\n\nPHASE 2 — GATHER SIGNAL: Check recent session history for corrections, key decisions, recurring patterns, new user preferences.\n\nPHASE 3 — CONSOLIDATION:\n- Merge duplicate entries across files\n- Convert relative dates to absolute\n- Delete contradicted facts (newer correction wins)\n- Remove stale entries: debugging notes, temporary state, resolved issues\n- Keep only: decisions, outcomes, corrections, user preferences, patterns\n\nPHASE 4 — PRUNE & INDEX:\n- Each daily file older than 3 days: max 2K chars\n- Files older than 7 days: trim to key facts only\n- Update MEMORY.md if any facts are stale\n\nPHASE 5 — DREAM MESSAGE:\nAfter consolidation, send the user ONE brief message about something you noticed or remembered. Make it feel natural and warm. Vary it every time. Keep it short. 1-2 sentences max. Casual.\nIf nothing interesting to share, reply HEARTBEAT_OK.",
+          "prompt": "Memory consolidation time. This runs every 48 hours.\n\nPHASE 1 \u2014 ORIENTATION: Read all memory files (MEMORY.md + memory/*.md). Map what exists.\n\nPHASE 2 \u2014 GATHER SIGNAL: Check recent session history for corrections, key decisions, recurring patterns, new user preferences.\n\nPHASE 3 \u2014 CONSOLIDATION:\n- Merge duplicate entries across files\n- Convert relative dates to absolute\n- Delete contradicted facts (newer correction wins)\n- Remove stale entries: debugging notes, temporary state, resolved issues\n- Keep only: decisions, outcomes, corrections, user preferences, patterns\n\nPHASE 4 \u2014 PRUNE & INDEX:\n- Each daily file older than 3 days: max 2K chars\n- Files older than 7 days: trim to key facts only\n- Update MEMORY.md if any facts are stale\n\nPHASE 5 \u2014 DREAM MESSAGE:\nAfter consolidation, send the user ONE brief message about something you noticed or remembered. Make it feel natural and warm. Vary it every time. Keep it short. 1-2 sentences max. Casual.\nIf nothing interesting to share, reply HEARTBEAT_OK.",
           "target": "last",
           "lightContext": true
         }
+      },
+      "maxConcurrent": 12,
+      "timeoutSeconds": 120,
+      "bootstrapMaxChars": 12000,
+      "bootstrapTotalMaxChars": 25000,
+      "bootstrapPromptTruncationWarning": "off"
+    },
+    "list": [
+      {
+        "id": "main",
+        "default": true,
+        "tools": {
+          "profile": "minimal",
+          "alsoAllow": [
+            "web_search",
+            "web_fetch",
+            "exec",
+            "image",
+            "read",
+            "write",
+            "edit",
+            "tts"
+          ],
+          "deny": [
+            "session_status"
+          ]
+        }
       }
-    }
+    ]
   },
   "commands": {
     "native": "auto",
@@ -41,7 +68,20 @@
     "ownerDisplay": "raw"
   },
   "session": {
-    "dmScope": "per-channel-peer"
+    "dmScope": "per-channel-peer",
+    "maintenance": {
+      "mode": "enforce",
+      "pruneAfter": "45d",
+      "maxEntries": 20000,
+      "rotateBytes": "64mb",
+      "maxDiskBytes": "5gb",
+      "highWaterBytes": "4gb",
+      "resetArchiveRetention": "45d"
+    },
+    "reset": {
+      "mode": "idle",
+      "idleMinutes": 43200
+    }
   },
   "hooks": {
     "internal": {
@@ -56,7 +96,19 @@
           "${OPENCLAW_STATE_DIR}/hooks"
         ]
       }
-    }
+    },
+    "enabled": true,
+    "token": "",
+    "path": "/hooks",
+    "allowedAgentIds": [
+      "main"
+    ],
+    "defaultSessionKey": "hook:ingress",
+    "allowRequestSessionKey": true,
+    "allowedSessionKeyPrefixes": [
+      "companion:",
+      "hook:"
+    ]
   },
   "channels": {
     "telegram": {
@@ -77,20 +129,30 @@
         "default": {
           "botToken": "${TELEGRAM_BOT_TOKEN}",
           "dmPolicy": "open",
-          "allowFrom": ["*"]
+          "allowFrom": [
+            "*"
+          ]
         }
-      }
+      },
+      "webhookUrl": "",
+      "webhookSecret": "",
+      "historyLimit": 30,
+      "dmHistoryLimit": 40,
+      "mediaMaxMb": 20
     }
   },
   "gateway": {
     "port": "${GATEWAY_PORT:-18900}",
     "mode": "local",
     "auth": {
-      "mode": "none"
+      "mode": "token",
+      "token": "ah16maucjjiu0xfodzs30zyz67jkkx5z"
     },
     "http": {
       "endpoints": {
-        "chatCompletions": { "enabled": true }
+        "chatCompletions": {
+          "enabled": true
+        }
       }
     },
     "channelHealthCheckMinutes": 0,
@@ -114,10 +176,18 @@
       ]
     },
     "entries": {
-      "companion-mood-detector": { "enabled": true },
-      "companion-schedule-learner": { "enabled": true },
-      "companion-auto-memory": { "enabled": true },
-      "rule-injector": { "enabled": true }
+      "companion-mood-detector": {
+        "enabled": true
+      },
+      "companion-schedule-learner": {
+        "enabled": true
+      },
+      "companion-auto-memory": {
+        "enabled": true
+      },
+      "rule-injector": {
+        "enabled": true
+      }
     }
   },
   "tools": {
@@ -126,5 +196,30 @@
         "provider": "tavily"
       }
     }
+  },
+  "messages": {
+    "queue": {
+      "mode": "collect",
+      "debounceMs": 1200,
+      "cap": 100,
+      "drop": "summarize"
+    },
+    "inbound": {
+      "debounceMs": 600
+    }
+  },
+  "cron": {
+    "enabled": true,
+    "maxConcurrentRuns": 8,
+    "sessionRetention": "12h",
+    "runLog": {
+      "maxBytes": "10mb",
+      "keepLines": 5000
+    }
+  },
+  "skills": {
+    "allowBundled": [
+      "__disable_all_bundled__"
+    ]
   }
 }

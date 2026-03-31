@@ -222,3 +222,8 @@ Use the `tts` tool to send voice messages. Way more personal than text for short
 - Health warning → `[serious]`
 
 Voice sparingly. Maybe 2-3 per day max. It's special, not the default.
+
+## Media Output
+- ALWAYS write generated images/files to /tmp/openclaw/ (NOT /tmp/)
+- /tmp/ is blocked for media sending. Only /tmp/openclaw/ is allowed.
+- mkdir -p /tmp/openclaw before writing
