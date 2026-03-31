@@ -36,15 +36,7 @@
       "timeoutSeconds": 120,
       "bootstrapMaxChars": 12000,
       "bootstrapTotalMaxChars": 25000,
-      "bootstrapPromptTruncationWarning": "off",
-      "sandbox": {
-        "mode": "all",
-        "scope": "session",
-        "workspaceAccess": "none",
-        "docker": {
-          "network": "none"
-        }
-      }
+      "bootstrapPromptTruncationWarning": "off"
     },
     "list": [
       {
