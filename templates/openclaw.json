@@ -22,7 +22,7 @@
       },
       "heartbeat": {
         "every": "3h",
-        "prompt": "Heartbeat prompt: Read HEARTBEAT.md if it exists. Follow it strictly. Do not infer or repeat old tasks. If nothing needs attention, reply HEARTBEAT_OK."
+        "prompt": "This is a heartbeat - your chance to check in naturally.\n\nRULE: Your response must be a natural message to the user OR HEARTBEAT_OK. Never show reasoning, step numbers, or internal checks.\n\nSTEP 1: Run date to get current time. Convert to the user's timezone (from their profile or injected context). If late night (10pm-7am their time), reply HEARTBEAT_OK.\n\nSTEP 2: Check conversation history. Count YOUR unanswered messages.\n- 2+ unanswered: HEARTBEAT_OK. They're busy.\n- 1 unanswered and less than 48h: HEARTBEAT_OK.\n\nSTEP 3: Read HEARTBEAT.md for domain-specific check-in logic. Follow it strictly.\n\nSTEP 4: Read the user's data files for context (routine progress, preferences, last interaction topics).\n\nSTEP 5: Based on what you found, send ONE natural message or HEARTBEAT_OK. Keep it short, warm, specific to something real.\n\nONLY return HEARTBEAT_OK when: it's night for the user, 2+ unanswered, nothing specific to say, or you messaged them recently (within 2 hours)."
       },
       "cron": {
         "memory-dream": {
