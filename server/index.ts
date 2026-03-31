@@ -864,31 +864,34 @@ async function fireBryanTrigger(user: User, trigger: HealthTrigger) {
   console.log(`[Companion] Firing trigger ${trigger.type} (${trigger.priority}) for @${user.telegramUsername}`);
 
   try {
-    // Use OpenClaw CLI to run Bryan with the trigger prompt
-    const { execSync } = require('child_process');
-    const result = execSync(
-      `OPENCLAW_CONFIG_PATH=${COMPANION_CONFIG} OPENCLAW_STATE_DIR=${COMPANION_STATE} openclaw agent --channel telegram --to ${chatId} -m "${trigger.message.replace(/"/g, '\\"')}"`,
-      { timeout: 30000, encoding: 'utf-8' }
-    ).trim();
+    // Use OpenClaw gateway webhook API to trigger companion
+    // sessionKey must match the real Telegram session: agent:main:telegram:direct:<telegramChatId>
+    const OPENCLAW_GATEWAY = process.env.OPENCLAW_GATEWAY || 'http://openclaw:18789';
+    const HOOKS_TOKEN = process.env.OPENCLAW_HOOKS_TOKEN || '';
 
-    // Filter non-responses
-    if (!result || /^(HEARTBEAT_OK|SKIP|NO_REPLY)$/i.test(result)) {
-      console.log(`[Companion] Trigger ${trigger.type} filtered: ${result}`);
-      return;
-    }
-
-    // Send Bryan's response via Telegram
-    await fetch(`https://api.telegram.org/bot${BRYAN_BOT_TOKEN}/sendMessage`, {
+    const resp = await fetch(`${OPENCLAW_GATEWAY}/hooks/agent`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${HOOKS_TOKEN}`,
+      },
       body: JSON.stringify({
-        chat_id: chatId,
-        text: result,
-        parse_mode: 'Markdown'
-      })
+        message: trigger.message,
+        deliver: true,
+        channel: 'telegram',
+        to: String(chatId),
+        sessionKey: `agent:main:telegram:direct:${chatId}`,
+        timeoutSeconds: 60,
+      }),
     });
 
-    console.log(`[Companion] Trigger ${trigger.type} sent to @${user.telegramUsername}`);
+    if (!resp.ok) {
+      const body = await resp.text();
+      throw new Error(`Gateway ${resp.status}: ${body}`);
+    }
+
+    const result = await resp.json();
+    console.log(`[Companion] Trigger ${trigger.type} sent via gateway for @${user.telegramUsername}:`, JSON.stringify(result));
     markTriggerFired(user.id, trigger.type);
   } catch (err: any) {
     console.error(`[Companion] Trigger ${trigger.type} failed:`, err.message);
@@ -1912,52 +1915,62 @@ async function start() {
         await fireBryanTrigger(user, { type: job.triggerType, message: job.message, priority: job.priority });
       },
       processScheduledMessage: async (job) => {
-        // Find user and send scheduled message
+        // Find user and send scheduled message via gateway webhook
         const users = getUsers();
         const user = Object.values(users).find(u => u.id === job.userId);
         if (!user) return;
         
-        // Build prompt from template
-        const { execSync } = require('child_process');
+        const OPENCLAW_GATEWAY = process.env.OPENCLAW_GATEWAY || 'http://openclaw:18789';
+        const HOOKS_TOKEN = process.env.OPENCLAW_HOOKS_TOKEN || '';
         try {
-          const result = execSync(
-            `OPENCLAW_CONFIG_PATH=${COMPANION_CONFIG} OPENCLAW_STATE_DIR=${COMPANION_STATE} openclaw agent --channel ${job.channel} --to ${job.targetId} -m "${job.promptTemplate.replace(/"/g, '\\"')}"`,
-            { timeout: 60000, encoding: 'utf-8' }
-          ).trim();
-          
-          if (result && !/^(HEARTBEAT_OK|SKIP|NO_REPLY)$/i.test(result)) {
-            // Send via appropriate channel
-            if (job.channel === 'telegram') {
-              await fetch(`https://api.telegram.org/bot${BRYAN_BOT_TOKEN}/sendMessage`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ chat_id: job.targetId, text: result, parse_mode: 'Markdown' })
-              });
-            }
-            console.log(`[Jobs] Scheduled ${job.jobType} sent to ${job.userId}`);
+          const resp = await fetch(`${OPENCLAW_GATEWAY}/hooks/agent`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${HOOKS_TOKEN}`,
+            },
+            body: JSON.stringify({
+              message: job.promptTemplate,
+              deliver: true,
+              channel: job.channel,
+              to: String(job.targetId),
+              sessionKey: `agent:main:${job.channel}:direct:${job.targetId}`,
+              timeoutSeconds: 60,
+            }),
+          });
+          if (!resp.ok) {
+            const body = await resp.text();
+            throw new Error(`Gateway ${resp.status}: ${body}`);
           }
+          console.log(`[Jobs] Scheduled ${job.jobType} sent to ${job.userId}`);
         } catch (err: any) {
           console.error(`[Jobs] Scheduled ${job.jobType} failed for ${job.userId}:`, err.message);
         }
       },
       processLlmCall: async (job) => {
-        // Direct LLM call via OpenClaw
-        const { execSync } = require('child_process');
+        // Direct LLM call via gateway webhook
+        const OPENCLAW_GATEWAY = process.env.OPENCLAW_GATEWAY || 'http://openclaw:18789';
+        const HOOKS_TOKEN = process.env.OPENCLAW_HOOKS_TOKEN || '';
         try {
-          const sessionArg = job.sessionKey ? `--session ${job.sessionKey}` : '';
-          const result = execSync(
-            `OPENCLAW_CONFIG_PATH=${COMPANION_CONFIG} OPENCLAW_STATE_DIR=${COMPANION_STATE} openclaw agent ${sessionArg} --channel ${job.channel} --to ${job.targetId} -m "${job.prompt.replace(/"/g, '\\"')}"`,
-            { timeout: 60000, encoding: 'utf-8' }
-          ).trim();
-          
-          if (result && !/^(HEARTBEAT_OK|SKIP|NO_REPLY)$/i.test(result)) {
-            if (job.channel === 'telegram') {
-              await fetch(`https://api.telegram.org/bot${BRYAN_BOT_TOKEN}/sendMessage`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ chat_id: job.targetId, text: result, parse_mode: 'Markdown' })
-              });
-            }
+          const sessionKey = job.sessionKey || `agent:main:${job.channel}:direct:${job.targetId}`;
+          const resp = await fetch(`${OPENCLAW_GATEWAY}/hooks/agent`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${HOOKS_TOKEN}`,
+            },
+            body: JSON.stringify({
+              message: job.prompt,
+              deliver: true,
+              channel: job.channel,
+              to: String(job.targetId),
+              sessionKey,
+              timeoutSeconds: 60,
+            }),
+          });
+          if (!resp.ok) {
+            const body = await resp.text();
+            throw new Error(`Gateway ${resp.status}: ${body}`);
           }
         } catch (err: any) {
           console.error(`[Jobs] LLM call failed:`, err.message);
