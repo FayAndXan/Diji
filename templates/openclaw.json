@@ -36,7 +36,15 @@
       "timeoutSeconds": 120,
       "bootstrapMaxChars": 12000,
       "bootstrapTotalMaxChars": 25000,
-      "bootstrapPromptTruncationWarning": "off"
+      "bootstrapPromptTruncationWarning": "off",
+      "sandbox": {
+        "mode": "all",
+        "scope": "session",
+        "workspaceAccess": "none",
+        "docker": {
+          "network": "none"
+        }
+      }
     },
     "list": [
       {
@@ -156,7 +164,8 @@
       }
     },
     "channelHealthCheckMinutes": 0,
-    "channelMaxRestartsPerHour": 10
+    "channelMaxRestartsPerHour": 10,
+    "bind": "loopback"
   },
   "plugins": {
     "_comment": "Generic DIJI companion plugins. Add domain-specific plugins (search enforcer, etc.) per companion.",
@@ -191,10 +200,40 @@
     }
   },
   "tools": {
-    "web": {
-      "search": {
-        "provider": "tavily"
-      }
+    "profile": "minimal",
+    "alsoAllow": [
+      "message",
+      "web_search",
+      "web_fetch"
+    ],
+    "deny": [
+      "group:runtime",
+      "group:fs",
+      "group:ui",
+      "group:nodes",
+      "group:automation",
+      "sessions_list",
+      "sessions_history",
+      "sessions_send",
+      "sessions_spawn",
+      "subagents",
+      "agents_list",
+      "memory_search",
+      "memory_get"
+    ],
+    "sessions": {
+      "visibility": "self"
+    },
+    "elevated": {
+      "enabled": false
+    },
+    "exec": {
+      "security": "deny",
+      "ask": "always",
+      "strictInlineEval": true
+    },
+    "fs": {
+      "workspaceOnly": true
     }
   },
   "messages": {
