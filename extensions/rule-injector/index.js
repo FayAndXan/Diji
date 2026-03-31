@@ -4,7 +4,7 @@
 
 import { MEAL_TEMPLATE, DAILY_TEMPLATE, WEEKLY_TEMPLATE, MONTHLY_TEMPLATE, YEARLY_TEMPLATE } from './templates.js';
 import { resolveUser, getUserDataDir } from './user-resolver.js';
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync, existsSync, writeFileSync, appendFileSync } from 'fs';
 import { join } from 'path';
 
 export default function register(api) {
@@ -79,11 +79,32 @@ export default function register(api) {
       try { userMemory = readFileSync(memoryMd, 'utf-8'); } catch {}
     }
 
+    // 7KB memory cap: trim oldest entries if over limit
+    const MAX_MEMORY_BYTES = 7168;
+    if (userMemory.length > MAX_MEMORY_BYTES) {
+      try {
+        const lines = userMemory.split('\n').filter(l => l.trim());
+        while (lines.join('\n').length > MAX_MEMORY_BYTES && lines.length > 5) {
+          lines.shift();
+        }
+        writeFileSync(memoryMd, lines.join('\n') + '\n');
+        userMemory = lines.join('\n') + '\n';
+        console.log('[rule-injector] Memory trimmed to 7KB cap (' + lines.length + ' entries)');
+      } catch {}
+    }
+
     // Onboarding check: user exists but hasn't completed onboarding conversation
     const onboardingComplete = user.healthProfile?.onboardingComplete || false;
     const hasUserMd = userProfile.length > 20; // non-trivial USER.md means they've been onboarded
     const needsOnboarding = user.isNew || (!onboardingComplete && !hasUserMd);
     
+    // Returning user instruction (survives session resets)
+    const returningUserRule = (!needsOnboarding && onboardingComplete)
+      ? '### RETURNING USER: You already know this person. Do NOT re-introduce yourself. Do NOT repeat onboarding. Pick up naturally as if continuing a conversation.'
+      : (!needsOnboarding && hasUserMd)
+        ? '### RETURNING USER: Onboarding incomplete but you have their profile. Continue where you left off. Do NOT start over.'
+        : '';
+
     const onboardingRule = needsOnboarding
       ? `### ONBOARDING MODE: This user hasn't been properly onboarded yet. Have a natural conversation to learn about them. Don't dump all questions at once — spread them across messages like a real person.
 
@@ -140,6 +161,7 @@ When you need deep analysis (blood work interpretation, health plans, supplement
     const rules = [
       '## ⚡ ENFORCED RULES (every turn, no exceptions)\n',
       langRule,
+      returningUserRule,
       onboardingRule,
       userIdentity,
       profileContext,
