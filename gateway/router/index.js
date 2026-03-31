@@ -1,53 +1,61 @@
 // ---------------------------------------------------------------------------
-// Diji Gateway Router
-// Routes incoming webhook messages to the correct OpenClaw instance
-// based on user ID. Uses Redis for user-to-instance mapping.
+// Diji Gateway Router v2
+// Routes incoming webhook messages to the correct companion instance
+// based on hostname (companion) + user ID (instance selection).
 //
 // Architecture:
-//   [Telegram/WhatsApp/WeChat webhook] → [nginx:443] → [this router:4000]
-//   → [OpenClaw instance N on port 18809+N]
+//   [Telegram webhook] → [Cloudflare] → [this router:4000]
+//   → demi.dijicomp.com → Demi instance pool
+//   → bryan.dijicomp.com → Bryan instance pool
 //
-// Each OpenClaw instance handles a chunk of users.
-// Redis tracks: userId → instanceId mapping
-// New users get assigned to the least-loaded instance.
+// Redis keys:
+//   diji:{companion}:instances (set of instance IDs)
+//   diji:{companion}:instance:{id} (hash: host, port, userCount)
+//   diji:{companion}:user:{channel}:{userId} (assigned instance ID)
 // ---------------------------------------------------------------------------
 
 import Redis from 'ioredis';
 import http from 'http';
-import https from 'https';
 
 const ROUTER_PORT = parseInt(process.env.ROUTER_PORT || '4000');
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 const MAX_USERS_PER_INSTANCE = parseInt(process.env.MAX_USERS_PER_INSTANCE || '500');
 
-// Instance registry: each entry is { id, host, port, userCount }
-// In production, instances self-register via Redis on startup
 const redis = new Redis(REDIS_URL);
+
+// Hostname → companion mapping
+const COMPANION_MAP = {
+  'demi.dijicomp.com': 'demi',
+  'bryan.dijicomp.com': 'bryan',
+  'gateway.dijicomp.com': 'gateway', // admin/stats
+};
+
+function getCompanion(req) {
+  const host = (req.headers.host || '').split(':')[0];
+  return COMPANION_MAP[host] || null;
+}
 
 // ---------------------------------------------------------------------------
 // Extract user ID from incoming webhook payload
 // ---------------------------------------------------------------------------
-function extractUserId(body, path) {
+function extractUserId(body) {
   try {
     const data = JSON.parse(body);
     
-    // Telegram webhook
-    if (data.message?.from?.id) {
-      return { channel: 'telegram', userId: String(data.message.from.id) };
-    }
-    if (data.callback_query?.from?.id) {
-      return { channel: 'telegram', userId: String(data.callback_query.from.id) };
-    }
+    // Telegram
+    if (data.message?.from?.id) return { channel: 'telegram', userId: String(data.message.from.id) };
+    if (data.callback_query?.from?.id) return { channel: 'telegram', userId: String(data.callback_query.from.id) };
+    if (data.edited_message?.from?.id) return { channel: 'telegram', userId: String(data.edited_message.from.id) };
+    if (data.channel_post?.from?.id) return { channel: 'telegram', userId: String(data.channel_post.from.id) };
+    if (data.inline_query?.from?.id) return { channel: 'telegram', userId: String(data.inline_query.from.id) };
     
-    // WhatsApp Cloud API webhook
+    // WhatsApp Cloud API
     if (data.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.from) {
       return { channel: 'whatsapp', userId: data.entry[0].changes[0].value.messages[0].from };
     }
     
-    // WeChat webhook
-    if (data.FromUserName) {
-      return { channel: 'wechat', userId: data.FromUserName };
-    }
+    // WeChat
+    if (data.FromUserName) return { channel: 'wechat', userId: data.FromUserName };
     
     return null;
   } catch {
@@ -56,51 +64,61 @@ function extractUserId(body, path) {
 }
 
 // ---------------------------------------------------------------------------
-// Get or assign instance for a user
+// Instance management (companion-namespaced)
 // ---------------------------------------------------------------------------
-async function getInstanceForUser(channel, userId) {
-  const key = `diji:user:${channel}:${userId}`;
+async function getInstanceForUser(companion, channel, userId) {
+  const userKey = `diji:${companion}:user:${channel}:${userId}`;
   
-  // Check existing assignment
-  let instanceId = await redis.get(key);
+  let instanceId = await redis.get(userKey);
   if (instanceId) {
-    const instance = await redis.hgetall(`diji:instance:${instanceId}`);
-    if (instance && instance.host) {
-      return instance;
-    }
-    // Instance gone, reassign
-    await redis.del(key);
+    const instance = await redis.hgetall(`diji:${companion}:instance:${instanceId}`);
+    if (instance && instance.host) return instance;
+    await redis.del(userKey);
   }
   
-  // Find least-loaded instance
-  const instanceIds = await redis.smembers('diji:instances');
-  let bestInstance = null;
+  // Least-loaded assignment
+  const instanceIds = await redis.smembers(`diji:${companion}:instances`);
+  let best = null;
   let minUsers = Infinity;
   
   for (const id of instanceIds) {
-    const inst = await redis.hgetall(`diji:instance:${id}`);
+    const inst = await redis.hgetall(`diji:${companion}:instance:${id}`);
     const count = parseInt(inst.userCount || '0');
     if (count < MAX_USERS_PER_INSTANCE && count < minUsers) {
       minUsers = count;
-      bestInstance = { ...inst, id };
+      best = { ...inst, id };
     }
   }
   
-  if (!bestInstance) {
-    console.error('[router] No available instances! All at capacity.');
-    return null;
+  if (!best) return null;
+  
+  await redis.set(userKey, best.id);
+  await redis.hincrby(`diji:${companion}:instance:${best.id}`, 'userCount', 1);
+  console.log(`[router] ${companion}: ${channel}:${userId} → instance ${best.id} (${minUsers + 1} users)`);
+  return best;
+}
+
+async function registerInstance(companion, id, host, port) {
+  await redis.sadd(`diji:${companion}:instances`, id);
+  await redis.hset(`diji:${companion}:instance:${id}`, {
+    id, host, port: String(port), userCount: '0',
+    registeredAt: new Date().toISOString(),
+  });
+  console.log(`[router] Registered: ${companion}/${id} at ${host}:${port}`);
+}
+
+async function deregisterInstance(companion, id) {
+  const keys = await redis.keys(`diji:${companion}:user:*`);
+  for (const key of keys) {
+    if (await redis.get(key) === id) await redis.del(key);
   }
-  
-  // Assign user to instance
-  await redis.set(key, bestInstance.id);
-  await redis.hincrby(`diji:instance:${bestInstance.id}`, 'userCount', 1);
-  console.log(`[router] Assigned ${channel}:${userId} → instance ${bestInstance.id} (${minUsers + 1} users)`);
-  
-  return bestInstance;
+  await redis.srem(`diji:${companion}:instances`, id);
+  await redis.del(`diji:${companion}:instance:${id}`);
+  console.log(`[router] Deregistered: ${companion}/${id}`);
 }
 
 // ---------------------------------------------------------------------------
-// Forward request to the assigned OpenClaw instance
+// Forward request
 // ---------------------------------------------------------------------------
 function forwardRequest(req, body, instance, res) {
   const options = {
@@ -110,9 +128,9 @@ function forwardRequest(req, body, instance, res) {
     method: req.method,
     headers: {
       ...req.headers,
-      'host': `${instance.host}:${instance.port}`,
       'content-length': Buffer.byteLength(body),
       'x-diji-routed': 'true',
+      'x-diji-instance': instance.id || 'unknown',
     },
   };
   
@@ -122,39 +140,13 @@ function forwardRequest(req, body, instance, res) {
   });
   
   proxy.on('error', (err) => {
-    console.error(`[router] Forward error to instance ${instance.id}: ${err.message}`);
+    console.error(`[router] Forward error ${instance.id}: ${err.message}`);
     res.writeHead(502);
     res.end('Bad Gateway');
   });
   
   proxy.write(body);
   proxy.end();
-}
-
-// ---------------------------------------------------------------------------
-// Instance self-registration (called by each OpenClaw instance on startup)
-// ---------------------------------------------------------------------------
-async function registerInstance(id, host, port) {
-  await redis.sadd('diji:instances', id);
-  await redis.hset(`diji:instance:${id}`, {
-    id, host, port: String(port), userCount: '0',
-    registeredAt: new Date().toISOString(),
-  });
-  console.log(`[router] Instance registered: ${id} at ${host}:${port}`);
-}
-
-async function deregisterInstance(id) {
-  // Reassign users from this instance
-  const keys = await redis.keys('diji:user:*');
-  for (const key of keys) {
-    const assignedTo = await redis.get(key);
-    if (assignedTo === id) {
-      await redis.del(key); // Will be reassigned on next message
-    }
-  }
-  await redis.srem('diji:instances', id);
-  await redis.del(`diji:instance:${id}`);
-  console.log(`[router] Instance deregistered: ${id}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -165,19 +157,39 @@ const server = http.createServer((req, res) => {
   
   // Health check
   if (req.url === '/health') {
-    res.writeHead(200);
-    res.end('ok');
+    res.writeHead(200, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ status: 'ok', uptime: process.uptime() }));
     return;
   }
   
-  // Instance registration API
+  const companion = getCompanion(req);
+  
+  // Stats (accessible from any hostname)
+  if (req.url === '/stats') {
+    (async () => {
+      const stats = {};
+      for (const comp of Object.values(COMPANION_MAP)) {
+        if (comp === 'gateway') continue;
+        const ids = await redis.smembers(`diji:${comp}:instances`);
+        const instances = [];
+        for (const id of ids) instances.push(await redis.hgetall(`diji:${comp}:instance:${id}`));
+        const users = await redis.keys(`diji:${comp}:user:*`);
+        stats[comp] = { instances, totalUsers: users.length };
+      }
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify(stats, null, 2));
+    })();
+    return;
+  }
+  
+  // Instance registration
   if (req.url === '/register' && req.method === 'POST') {
     req.on('data', chunk => body += chunk);
     req.on('end', async () => {
       try {
-        const { id, host, port } = JSON.parse(body);
-        await registerInstance(id, host, port);
-        res.writeHead(200);
+        const { companion: comp, id, host, port } = JSON.parse(body);
+        await registerInstance(comp, id, host, port);
+        res.writeHead(200, { 'content-type': 'application/json' });
         res.end(JSON.stringify({ ok: true }));
       } catch (err) {
         res.writeHead(400);
@@ -192,9 +204,9 @@ const server = http.createServer((req, res) => {
     req.on('data', chunk => body += chunk);
     req.on('end', async () => {
       try {
-        const { id } = JSON.parse(body);
-        await deregisterInstance(id);
-        res.writeHead(200);
+        const { companion: comp, id } = JSON.parse(body);
+        await deregisterInstance(comp, id);
+        res.writeHead(200, { 'content-type': 'application/json' });
         res.end(JSON.stringify({ ok: true }));
       } catch (err) {
         res.writeHead(400);
@@ -204,55 +216,50 @@ const server = http.createServer((req, res) => {
     return;
   }
   
-  // Stats
-  if (req.url === '/stats') {
-    (async () => {
-      const instanceIds = await redis.smembers('diji:instances');
-      const instances = [];
-      for (const id of instanceIds) {
-        instances.push(await redis.hgetall(`diji:instance:${id}`));
-      }
-      const totalUsers = await redis.keys('diji:user:*');
+  if (!companion || companion === 'gateway') {
+    // Gateway hostname: only admin endpoints above, webhook traffic needs companion hostname
+    if (req.url === '/') {
       res.writeHead(200, { 'content-type': 'application/json' });
-      res.end(JSON.stringify({ instances, totalUsers: totalUsers.length }));
-    })();
+      res.end(JSON.stringify({ service: 'diji-router', version: '2.0.0' }));
+      return;
+    }
+    res.writeHead(404);
+    res.end('Use companion-specific hostname for webhooks');
     return;
   }
   
   // Webhook routing
   req.on('data', chunk => body += chunk);
   req.on('end', async () => {
-    // WhatsApp verification (GET request)
-    if (req.method === 'GET' && req.url.includes('hub.verify_token')) {
-      // Forward to first available instance for verification
-      const instanceIds = await redis.smembers('diji:instances');
-      if (instanceIds.length > 0) {
-        const inst = await redis.hgetall(`diji:instance:${instanceIds[0]}`);
+    // WhatsApp GET verification
+    if (req.method === 'GET') {
+      const ids = await redis.smembers(`diji:${companion}:instances`);
+      if (ids.length > 0) {
+        const inst = await redis.hgetall(`diji:${companion}:instance:${ids[0]}`);
         forwardRequest(req, '', inst, res);
       } else {
         res.writeHead(503);
-        res.end('No instances available');
+        res.end('No instances');
       }
       return;
     }
     
-    const userInfo = extractUserId(body, req.url);
+    const userInfo = extractUserId(body);
     
     if (!userInfo) {
-      // Can't identify user, forward to first instance (registration, etc.)
-      const instanceIds = await redis.smembers('diji:instances');
-      if (instanceIds.length > 0) {
-        const inst = await redis.hgetall(`diji:instance:${instanceIds[0]}`);
+      // Unknown user, forward to first instance
+      const ids = await redis.smembers(`diji:${companion}:instances`);
+      if (ids.length > 0) {
+        const inst = await redis.hgetall(`diji:${companion}:instance:${ids[0]}`);
         forwardRequest(req, body, inst, res);
       } else {
         res.writeHead(503);
-        res.end('No instances available');
+        res.end('No instances');
       }
       return;
     }
     
-    const instance = await getInstanceForUser(userInfo.channel, userInfo.userId);
-    
+    const instance = await getInstanceForUser(companion, userInfo.channel, userInfo.userId);
     if (!instance) {
       res.writeHead(503);
       res.end('All instances at capacity');
@@ -264,12 +271,12 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(ROUTER_PORT, () => {
-  console.log(`[diji-router] Listening on port ${ROUTER_PORT}`);
+  console.log(`[diji-router] v2 listening on port ${ROUTER_PORT}`);
   console.log(`[diji-router] Redis: ${REDIS_URL}`);
-  console.log(`[diji-router] Max users per instance: ${MAX_USERS_PER_INSTANCE}`);
+  console.log(`[diji-router] Max users/instance: ${MAX_USERS_PER_INSTANCE}`);
+  console.log(`[diji-router] Companions: ${Object.entries(COMPANION_MAP).map(([h,c]) => `${h} → ${c}`).join(', ')}`);
 });
 
-// Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('[diji-router] Shutting down...');
   server.close();
