@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "defaults": {
+    "security": "allowlist",
+    "ask": "off",
+    "askFallback": "deny"
+  },
+  "agents": {
+    "main": {
+      "security": "allowlist",
+      "ask": "off",
+      "askFallback": "deny",
+      "allowlist": [
+        {
+          "pattern": "/usr/bin/python3"
+        },
+        {
+          "pattern": "/usr/local/bin/python3"
+        },
+        {
+          "pattern": "/usr/bin/python*"
+        },
+        {
+          "pattern": "/usr/local/bin/python*"
+        }
+      ]
+    }
+  }
+}
