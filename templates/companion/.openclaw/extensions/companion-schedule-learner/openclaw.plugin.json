@@ -1,0 +1,9 @@
+{
+  "id": "companion-schedule-learner",
+  "name": "companion-schedule-learner",
+  "version": "0.1.0",
+  "description": "Learns user message patterns and injects schedule context.",
+  "entry": "index.ts",
+  "hooks": ["before_prompt_build"],
+  "configSchema": { "type": "object", "properties": { "enabled": { "type": "boolean", "default": true } }, "additionalProperties": false }
+}

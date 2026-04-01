@@ -1,0 +1,9 @@
+{
+  "id": "companion-auto-memory",
+  "name": "companion-auto-memory",
+  "version": "0.1.0",
+  "description": "Auto-saves user data to per-user memory files after conversations.",
+  "entry": "index.ts",
+  "hooks": ["before_prompt_build"],
+  "configSchema": { "type": "object", "properties": { "enabled": { "type": "boolean", "default": true } }, "additionalProperties": false }
+}

@@ -1,0 +1,9 @@
+{
+  "id": "companion-mood-detector",
+  "name": "companion-mood-detector",
+  "version": "0.1.0",
+  "description": "Analyzes emotional tone and injects mood context.",
+  "entry": "index.ts",
+  "hooks": ["before_prompt_build"],
+  "configSchema": { "type": "object", "properties": { "enabled": { "type": "boolean", "default": true } }, "additionalProperties": false }
+}

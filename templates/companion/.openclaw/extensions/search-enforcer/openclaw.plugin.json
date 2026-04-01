@@ -1,0 +1,9 @@
+{
+  "id": "search-enforcer",
+  "name": "search-enforcer",
+  "version": "0.1.0",
+  "description": "Forces web search for product/brand recommendations instead of training data.",
+  "entry": "index.ts",
+  "hooks": ["before_prompt_build"],
+  "configSchema": { "type": "object", "properties": { "enabled": { "type": "boolean", "default": true } }, "additionalProperties": false }
+}
