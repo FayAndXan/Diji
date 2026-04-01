@@ -1319,7 +1319,7 @@ app.post('/api/internal/users/:id/profile', (req: any, res: any) => {
   
   // Update health profile fields
   if (!user.healthProfile) user.healthProfile = {};
-  const profileFields = ['onboardingComplete', 'name', 'timezone', 'hasBand', 'bandType', 'sleepsWithBand', 'healthGoals', 'dietaryRestrictions', 'language'];
+  const profileFields = ['onboardingComplete', 'name', 'timezone', 'hasBand', 'bandType', 'sleepsWithBand', 'healthGoals', 'dietaryRestrictions', 'language', 'companionName', 'companionGender', 'age', 'biologicalSex', 'heightCm', 'weightKg', 'dateOfBirth', 'homeCountry', 'homeCity', 'currentCountry', 'currentCity', 'latitude', 'longitude', 'wakeTime'];
   for (const field of profileFields) {
     if (updates[field] !== undefined) {
       user.healthProfile[field] = updates[field];
