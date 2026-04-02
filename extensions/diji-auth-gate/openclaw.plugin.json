@@ -1,0 +1,21 @@
+{
+  "id": "diji-auth-gate",
+  "name": "DIJI Auth Gate",
+  "version": "1.0.0",
+  "description": "Zero-cost auth gate for DIJI companions. Supports invite-code and companion-server modes.",
+  "entry": "index.js",
+  "hooks": ["inbound_claim"],
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "enabled": { "type": "boolean", "default": true },
+      "config": {
+        "type": "object",
+        "properties": {
+          "mode": { "type": "string", "enum": ["invite-code", "companion-server", "open"], "default": "invite-code" },
+          "gateMessage": { "type": "string" }
+        }
+      }
+    }
+  }
+}
