@@ -7,6 +7,13 @@ import { resolveUser, getUserDataDir } from './user-resolver.js';
 import { readFileSync, existsSync, writeFileSync, appendFileSync } from 'fs';
 import { join } from 'path';
 
+const REF = /root/.openclaw-companion/reference;
+function loadRef(name) {
+  const p = join(REF, name);
+  if (existsSync(p)) { try { return readFileSync(p, utf-8); } catch {} }
+  return ;
+}
+
 export default function register(api) {
   api.on('before_prompt_build', (event, ctx) => {
     const user = resolveUser(ctx);

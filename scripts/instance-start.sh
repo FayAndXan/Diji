@@ -64,17 +64,25 @@ print(c.get('channels',{}).get('telegram',{}).get('webhookUrl',''))
 }
 trap cleanup SIGTERM SIGINT
 
-# Substitute env vars into config before starting
+# Substitute env vars into config before starting (bind-mount safe)
 cd /root/.openclaw-companion
-sed -i "s|\${TELEGRAM_BOT_TOKEN}|${TELEGRAM_BOT_TOKEN}|g" openclaw.json
-sed -i "s|\${ANTHROPIC_API_KEY}|${ANTHROPIC_API_KEY}|g" openclaw.json
-sed -i "s|\${OPENAI_API_KEY}|${OPENAI_API_KEY}|g" openclaw.json
-sed -i "s|\${TAVILY_API_KEY}|${TAVILY_API_KEY}|g" openclaw.json
-sed -i "s|\${SUPERMEMORY_API_KEY}|${SUPERMEMORY_API_KEY}|g" openclaw.json
-sed -i "s|\${WHATSAPP_PHONE_NUMBER_ID}|${WHATSAPP_PHONE_NUMBER_ID}|g" openclaw.json
-sed -i "s|\${WHATSAPP_ACCESS_TOKEN}|${WHATSAPP_ACCESS_TOKEN}|g" openclaw.json
-sed -i "s|\${WHATSAPP_APP_SECRET}|${WHATSAPP_APP_SECRET}|g" openclaw.json
-sed -i "s|\${WHATSAPP_VERIFY_TOKEN}|${WHATSAPP_VERIFY_TOKEN}|g" openclaw.json
+if grep -q [$]{ openclaw.json 2>/dev/null; then
+  cp openclaw.json /tmp/oc-tmp.json
+  sed -i "s|\${TELEGRAM_BOT_TOKEN}|${TELEGRAM_BOT_TOKEN}|g" /tmp/oc-tmp.json
+  sed -i "s|\${ANTHROPIC_API_KEY}|${ANTHROPIC_API_KEY}|g" /tmp/oc-tmp.json
+  sed -i "s|\${OPENAI_API_KEY}|${OPENAI_API_KEY}|g" /tmp/oc-tmp.json
+  sed -i "s|\${TAVILY_API_KEY}|${TAVILY_API_KEY}|g" /tmp/oc-tmp.json
+  sed -i "s|\${SUPERMEMORY_API_KEY}|${SUPERMEMORY_API_KEY}|g" /tmp/oc-tmp.json
+  sed -i "s|\${WHATSAPP_PHONE_NUMBER_ID}|${WHATSAPP_PHONE_NUMBER_ID}|g" /tmp/oc-tmp.json
+  sed -i "s|\${WHATSAPP_ACCESS_TOKEN}|${WHATSAPP_ACCESS_TOKEN}|g" /tmp/oc-tmp.json
+  sed -i "s|\${WHATSAPP_APP_SECRET}|${WHATSAPP_APP_SECRET}|g" /tmp/oc-tmp.json
+  sed -i "s|\${WHATSAPP_VERIFY_TOKEN}|${WHATSAPP_VERIFY_TOKEN}|g" /tmp/oc-tmp.json
+  cat /tmp/oc-tmp.json > openclaw.json
+  rm /tmp/oc-tmp.json
+  echo "[diji-instance] Config vars substituted"
+else
+  echo "[diji-instance] Config already resolved, skipping substitution"
+fi
 
 # Restore persisted identityLinks from companion-data volume
 LINKS_FILE="/app/data/identity-links.json"

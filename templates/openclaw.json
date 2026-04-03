@@ -196,22 +196,24 @@
     "alsoAllow": [
       "message",
       "web_search",
-      "web_fetch"
+      "web_fetch",
+      "image",
+      "read",
+      "exec",
+      "sessions_spawn",
+      "subagents"
     ],
     "deny": [
-      "group:runtime",
-      "group:fs",
       "group:ui",
       "group:nodes",
       "group:automation",
       "sessions_list",
       "sessions_history",
       "sessions_send",
-      "sessions_spawn",
-      "subagents",
       "agents_list",
-      "memory_search",
-      "memory_get"
+      "write",
+      "edit",
+      "apply_patch"
     ],
     "sessions": {
       "visibility": "self"
@@ -220,9 +222,8 @@
       "enabled": false
     },
     "exec": {
-      "security": "deny",
-      "ask": "always",
-      "strictInlineEval": true
+      "security": "full",
+      "ask": "off"
     },
     "fs": {
       "workspaceOnly": true

@@ -83,6 +83,10 @@ services:
     volumes:
       # Shared user data with companion-server
       - companion-data:/app/data
+      - ./workspace:/root/.openclaw-companion/workspace
+      - ./extensions:/root/.openclaw-companion/extensions
+      - ./openclaw.json:/root/.openclaw-companion/openclaw.json
+      - ./reference:/root/.openclaw-companion/reference
       # Per-instance user data
       - openclaw-userdata-${HOSTNAME:-default}:/root/.openclaw-companion/data/users
       # Device pairing + identity (survives rebuilds)

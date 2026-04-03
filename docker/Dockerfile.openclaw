@@ -12,6 +12,7 @@ RUN npm install -g openclaw
 # Create directory structure
 # workspace at $OPENCLAW_STATE_DIR/workspace = /root/.openclaw-companion/workspace
 RUN mkdir -p /root/.openclaw-companion/workspace \
+    /root/.openclaw-companion/reference \
     /root/.openclaw-companion/extensions \
     /root/.openclaw-companion/hooks/user-bootstrap \
     /root/.openclaw-companion/data/users \
@@ -33,6 +34,9 @@ COPY docker/bryan-openclaw.json /root/.openclaw-companion/openclaw.json
 
 # Copy companion-specific workspace (SOUL.md, AGENTS.md, etc.)
 COPY templates/companion/.openclaw/workspace/ /root/.openclaw-companion/workspace/
+
+# Copy reference docs (large docs loaded on-demand, not every message)
+COPY templates/companion/reference/ /root/.openclaw-companion/reference/
 
 # Copy cron scripts, prompts, and set up cron paths
 COPY scripts/crons/ /usr/local/bin/bryan-crons/

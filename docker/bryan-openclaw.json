@@ -224,6 +224,32 @@
       "search": {
         "provider": "tavily"
       }
+    },
+    "alsoAllow": [
+      "message",
+      "web_search",
+      "web_fetch",
+      "image",
+      "read",
+      "exec",
+      "sessions_spawn",
+      "subagents"
+    ],
+    "deny": [
+      "group:ui",
+      "group:nodes",
+      "group:automation",
+      "sessions_list",
+      "sessions_history",
+      "sessions_send",
+      "agents_list",
+      "write",
+      "edit",
+      "apply_patch"
+    ],
+    "exec": {
+      "security": "full",
+      "ask": "off"
     }
   },
   "meta": {
