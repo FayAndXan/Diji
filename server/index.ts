@@ -1274,33 +1274,73 @@ ${context ? `User context: ${context}` : ''}`,
   
   const systemPrompt = prompts[type] || `Analyze this health data thoroughly and provide actionable recommendations:\n\n${data}\n${context ? `User context: ${context}` : ''}`;
   
+  const openaiKey = process.env.OPENAI_API_KEY;
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  
+  if (!openaiKey && !anthropicKey) {
+    return res.status(500).json({ error: 'No API key configured (OPENAI_API_KEY or ANTHROPIC_API_KEY)' });
+  }
+
   try {
-    const Anthropic = require('@anthropic-ai/sdk');
-    const client = new Anthropic({ apiKey });
+    const analysisModel = 'gpt-5.4-2026-03-05';
     
-    console.log(`[Companion] Opus analysis: type=${type} userId=${userId || 'unknown'}`);
-    
-    const response = await client.messages.create({
-      model: 'claude-opus-4-6',
-      max_tokens: 4096,
-      messages: [{ role: 'user', content: systemPrompt }],
-    });
-    
-    const result = response.content[0]?.text || 'Analysis failed';
-    
-    console.log(`[Companion] Opus analysis complete: ${result.length} chars`);
-    
-    res.json({ 
-      analysis: result,
-      model: 'claude-opus-4-6',
-      type,
-      tokens: {
-        input: response.usage?.input_tokens,
-        output: response.usage?.output_tokens,
-      }
-    });
+    if (openaiKey) {
+      // Primary: OpenAI GPT-5.4 with reasoning_effort=high
+      const OpenAI = require('openai');
+      const client = new OpenAI({ apiKey: openaiKey });
+      
+      console.log(`[Companion] GPT-5.4 analysis: type=${type} userId=${userId || 'unknown'}`);
+      
+      const response = await client.chat.completions.create({
+        model: analysisModel,
+        reasoning_effort: "high",
+        max_completion_tokens: 80000,
+        messages: [
+          { role: 'system', content: 'You are a longevity-focused health analyst with deep expertise in biomarkers, nutrition, and preventive medicine.' },
+          { role: 'user', content: systemPrompt }
+        ],
+      });
+      
+      const result = response.choices[0]?.message?.content || 'Analysis failed';
+      console.log(`[Companion] GPT-5.4 analysis complete: ${result.length} chars`);
+      
+      res.json({
+        analysis: result,
+        model: analysisModel,
+        reasoning_effort: "high",
+        type,
+        tokens: {
+          input: response.usage?.prompt_tokens,
+          output: response.usage?.completion_tokens,
+        }
+      });
+    } else {
+      // Fallback: Anthropic Opus
+      const Anthropic = require('@anthropic-ai/sdk');
+      const client = new Anthropic({ apiKey: anthropicKey });
+      
+      console.log(`[Companion] Opus analysis (fallback): type=${type} userId=${userId || 'unknown'}`);
+      
+      const response = await client.messages.create({
+        model: 'claude-opus-4-6',
+        max_tokens: 4096,
+        messages: [{ role: 'user', content: systemPrompt }],
+      });
+      
+      const result = response.content[0]?.text || 'Analysis failed';
+      
+      res.json({
+        analysis: result,
+        model: 'claude-opus-4-6',
+        type,
+        tokens: {
+          input: response.usage?.input_tokens,
+          output: response.usage?.output_tokens,
+        }
+      });
+    }
   } catch (err: any) {
-    console.error(`[Companion] Opus analysis failed:`, err.message);
+    console.error(`[Companion] Analysis failed:`, err.message);
     res.status(500).json({ error: `Analysis failed: ${err.message}` });
   }
 });
