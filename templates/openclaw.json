@@ -33,7 +33,7 @@
         }
       },
       "maxConcurrent": 12,
-      "timeoutSeconds": 120,
+      "timeoutSeconds": 300,
       "bootstrapMaxChars": 12000,
       "bootstrapTotalMaxChars": 25000,
       "bootstrapPromptTruncationWarning": "off"
@@ -227,7 +227,15 @@
       "ask": "off"
     },
     "fs": {
-      "workspaceOnly": true
+      "workspaceOnly": false
+    },
+    "media": {
+      "image": {
+        "attachments": {
+          "mode": "all",
+          "maxAttachments": 10
+        }
+      }
     }
   },
   "messages": {
