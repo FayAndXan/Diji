@@ -1289,11 +1289,14 @@ ${context ? `User context: ${context}` : ''}`,
       const OpenAI = require('openai');
       const client = new OpenAI({ apiKey: openaiKey });
       
-      console.log(`[Companion] GPT-5.4 analysis: type=${type} userId=${userId || 'unknown'}`);
+      // Smart reasoning routing by type
+      const highReasoningTypes = ["cancer-markers", "oncology", "complex-panel", "drug-interactions", "rare-conditions"];
+      const reasoningLevel = highReasoningTypes.includes(type) ? "high" : "medium";
+      console.log(`[Companion] GPT-5.4 analysis: type=${type} reasoning=${reasoningLevel} userId=${userId || 'unknown'}`);
       
       const response = await client.chat.completions.create({
         model: analysisModel,
-        reasoning_effort: "high",
+        reasoning_effort: reasoningLevel,
         max_completion_tokens: 80000,
         messages: [
           { role: 'system', content: 'You are a longevity-focused health analyst with deep expertise in biomarkers, nutrition, and preventive medicine.' },
