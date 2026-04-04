@@ -73,7 +73,9 @@
       },
       "allowFrom": [
         "*"
-      ]
+      ],
+      "reactionLevel": "extensive",
+      "reactionNotifications": "own"
     },
     "whatsapp-cloud": {
       "enabled": true,
@@ -233,7 +235,8 @@
       "read",
       "exec",
       "sessions_spawn",
-      "subagents"
+      "subagents",
+      "tts"
     ],
     "deny": [
       "group:ui",

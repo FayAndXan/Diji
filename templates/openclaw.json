@@ -124,7 +124,7 @@
         "editMessage": true
       },
       "reactionNotifications": "own",
-      "reactionLevel": "minimal",
+      "reactionLevel": "extensive",
       "accounts": {
         "default": {
           "botToken": "${TELEGRAM_BOT_TOKEN}",
@@ -201,7 +201,8 @@
       "read",
       "exec",
       "sessions_spawn",
-      "subagents"
+      "subagents",
+      "tts"
     ],
     "deny": [
       "group:ui",
