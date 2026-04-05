@@ -79,7 +79,7 @@ function extractFacts(messages) {
 
   for (const msg of messages) {
     const role = msg.role;
-    const content = typeof msg.content === 'string'
+    let content = typeof msg.content === 'string'
       ? msg.content
       : Array.isArray(msg.content)
         ? msg.content.filter(p => p.type === 'text').map(p => p.text || '').join(' ')
