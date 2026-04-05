@@ -1,0 +1,13 @@
+{
+  "id": "companion-memory-flush",
+  "name": "Companion Memory Flush",
+  "version": "1.0.0",
+  "description": "Persists per-user conversation memories on session reset and before compaction. Auto-sets onboardingComplete when sufficient data exists.",
+  "entry": "index.js",
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "enabled": { "type": "boolean", "default": true }
+    }
+  }
+}

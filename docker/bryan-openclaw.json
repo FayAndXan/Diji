@@ -18,7 +18,10 @@
         "ttl": "1h"
       },
       "compaction": {
-        "mode": "safeguard"
+        "mode": "safeguard",
+        "memoryFlush": {
+          "enabled": false
+        }
       },
       "workspace": "/root/.openclaw-companion/workspace",
       "heartbeat": {
@@ -143,6 +146,7 @@
       "companion-interaction-checker",
       "companion-search-enforcer",
       "companion-auto-memory",
+      "companion-memory-flush",
       "rule-injector",
       "telegram",
       "anthropic",
@@ -165,6 +169,7 @@
         "/root/.openclaw-companion/extensions/companion-interaction-checker",
         "/root/.openclaw-companion/extensions/companion-search-enforcer",
         "/root/.openclaw-companion/extensions/companion-auto-memory",
+        "/root/.openclaw-companion/extensions/companion-memory-flush",
         "/root/.openclaw-companion/extensions/rule-injector",
         "/root/.openclaw-companion/extensions/openclaw-whatsapp-cloud-api",
         "/usr/local/lib/node_modules/@tencent-weixin/openclaw-weixin"
@@ -194,6 +199,10 @@
       },
       "companion-auto-memory": {
         "enabled": true
+      },
+      "companion-memory-flush": {
+        "enabled": true,
+        "config": {}
       },
       "rule-injector": {
         "enabled": true
@@ -246,10 +255,7 @@
       "sessions_list",
       "sessions_history",
       "sessions_send",
-      "agents_list",
-      "write",
-      "edit",
-      "apply_patch"
+      "agents_list"
     ],
     "exec": {
       "security": "full",
